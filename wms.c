@@ -1,4 +1,4 @@
-#include "Memory.h"
+#include "MemoryManagerInit.h"
 static int __init wmsInit(void) {
     printk(KERN_INFO "Hi from the Kernel Module!\n");
     return 0;
