@@ -1,4 +1,4 @@
-# Memory.h.md
+# Memory.h
 
 This header file defines a standard interface for memory management that can be included in various projects. By including **`wms.h`**, it establishes a connection to the broader **`wms`** module, ensuring seamless integration with other components of the project.
 
