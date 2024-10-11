@@ -1,3 +1,6 @@
+	REPO_NAME = how-to-get-your-attention.com
+BRANCH = main
+COMMIT_MESSAGE = "Auto commit"
 obj-m += Memory.o
 
 obj-m += wms.o 
@@ -26,3 +29,15 @@ stop:
 
 clear: 
 	sudo dmesg -C
+
+
+
+# Target to push changes
+push:
+	git add .
+	git commit -m $(COMMIT_MESSAGE)
+	git push origin $(BRANCH)
+
+# Target to pull changes
+pull:
+	git pull origin $(BRANCH)
