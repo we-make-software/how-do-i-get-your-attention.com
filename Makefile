@@ -19,10 +19,18 @@ remove:
 
 log: 
 	dmesg
+push:
+	git add .
+	git commit -m $(COMMIT_MESSAGE)
+	git push origin $(BRANCH)
+
+# Target to pull changes
+pull:
+	git pull origin $(BRANCH)
 
 reload: remove clean all insert log
 
-play: all insert log
+play:push all insert log
 
 stop: 
 	sudo rmmod wms || true && make clean
@@ -32,12 +40,3 @@ clear:
 
 
 
-# Target to push changes
-push:
-	git add .
-	git commit -m $(COMMIT_MESSAGE)
-	git push origin $(BRANCH)
-
-# Target to pull changes
-pull:
-	git pull origin $(BRANCH)
