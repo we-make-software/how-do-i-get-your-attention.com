@@ -1,3 +1,5 @@
-#include "Memory.h"
+#include "MemoryManager.h"
 
-// Implementation of functions for MemoryManager module.
+
+void MemoryManagerInit(){}
+void MemoryManagerExit(){}
