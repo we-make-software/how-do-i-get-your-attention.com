@@ -16,9 +16,8 @@ insert:
 	sudo insmod wms.ko
 
 remove:
-	sudo rmmod Memory
 	sudo rmmod wms
-	
+	sudo rmmod Memory
 log: 
 	dmesg
 push:
