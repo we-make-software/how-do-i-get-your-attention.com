@@ -1,14 +1,6 @@
-#include "Memory.init.h" 
-void memoryInit(void) {
-    printk(KERN_ALERT "Memory initialized successfully.\n");
-}
-EXPORT_SYMBOL(memoryInit); 
-MODULE_METADATA(); 
-/*
-bool isMemoryAvailable(unsigned long memoryRequiredBytes);
-void waitForMemoryIsAvailable(unsigned long memoryRequiredBytes);
+#include "Memory.h" 
 struct sysinfo si;
-
+bool isMemoryAvailable(unsigned long memoryRequiredBytes);
 bool isMemoryAvailable(unsigned long memoryRequiredBytes) {
     si_meminfo(&si);
     unsigned long available_bytes = si.freeram * PAGE_SIZE;
@@ -18,24 +10,19 @@ bool isMemoryAvailable(unsigned long memoryRequiredBytes) {
     }
     else return false;
 }
-
+void waitForMemoryIsAvailable(unsigned long memoryRequiredBytes);
 void waitForMemoryIsAvailable(unsigned long memoryRequiredBytes) {
-    while (!isMemoryAvailable(memoryRequiredBytes * 2)) udelay(10);
+    while (!isMemoryAvailable(memoryRequiredBytes*2)) udelay(10);
 }
-
-void* waitForMemory(unsigned long memoryRequiredBytes) {
+void* waitForMemory(unsigned long memoryRequiredBytes){
     waitForMemoryIsAvailable(memoryRequiredBytes);
-    void* _kmalloc = kmalloc(memoryRequiredBytes, GFP_KERNEL);
-    while (!_kmalloc) {
-        waitForMemoryIsAvailable(memoryRequiredBytes);
-        _kmalloc = kmalloc(memoryRequiredBytes, GFP_KERNEL);
+    void* _kmalloc= kmalloc(memoryRequiredBytes, GFP_KERNEL);
+    while (!_kmalloc)
+    {
+         waitForMemoryIsAvailable(memoryRequiredBytes);
+         _kmalloc= kmalloc(memoryRequiredBytes, GFP_KERNEL);
     }
     return _kmalloc;
 }
-
-void memoryInit(void) {
-    // Initialization logic
-}
-
-EXPORT_SYMBOL(memoryInit);  // Export the symbol here
-*/
+EXPORT_SYMBOL(waitForMemory); 
+MODULE_METADATA(); 

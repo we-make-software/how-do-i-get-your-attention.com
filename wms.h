@@ -18,7 +18,7 @@
 #include <linux/path.h>     
 #include <linux/namei.h>   
 #include <linux/mount.h> 
-#include "Memory.init.h"
+#include "Memory.h"
 #ifndef MODULE_INFO_MACROS
 #define MODULE_INFO_MACROS
 #define MODULE_METADATA() \
