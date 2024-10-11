@@ -16,13 +16,13 @@ What I aim to develop is software that helps companies correct mistakes in their
 
 # [Makefile Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/Make.md)
 
-# [WMS c Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/wms.c.md)  
-
 # [WMS h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/wms.h.md) 
 
 ## [Memory h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/Memory.h.md)
 
 ### [MemoryManager h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/MemoryManager.h.md)
+
+# [WMS c Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/wms.c.md)  
 
 ## [Memory c Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/Memory.c.md)
 
