@@ -27,3 +27,4 @@ What I aim to develop is software that helps companies correct mistakes in their
 ## [Memory c Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/Memory.c.md)
 
 ### [MemoryManager c Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/MemoryManager.c.md)
+# [MemoryManagerInit h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/MemoryManagerInit.h.md)
