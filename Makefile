@@ -10,12 +10,15 @@ clean:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
 
 insert:
+	sudo rmmod wms || true
+	sudo rmmod Memory || true
 	sudo insmod Memory.ko
 	sudo insmod wms.ko
 
 remove:
+	sudo rmmod Memory
 	sudo rmmod wms
-	sudo rmmod Memory.ko
+	
 log: 
 	dmesg
 push:
