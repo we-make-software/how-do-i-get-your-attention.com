@@ -14,8 +14,12 @@ I invest in myself so I can provide the best software solutions for companies. W
 
 What I aim to develop is software that helps companies correct mistakes in their systems. I’m planning to build a full cloud-based system—covering storage, websites, reviews, social media, and everything needed to promote a company.
 
-[Makefile Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/Make.md)
-[WMS h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/wms.h.md)  
-[WMS c Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/wms.c.md)  
-[Memory h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/Memory.h.md)
-[Memory h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/Memory.c.md)
+# [Makefile Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/Make.md)
+
+# [WMS h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/wms.h.md) 
+
+# [WMS c Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/wms.c.md)  
+
+# [Memory h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/Memory.h.md)
+
+# [Memory h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/Memory.c.md)
