@@ -22,4 +22,4 @@ What I aim to develop is software that helps companies correct mistakes in their
 
 # [Memory h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/Memory.h.md)
 
-# [Memory h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/Memory.c.md)
+# [Memory c Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/Memory.c.md)
