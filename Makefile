@@ -1,10 +1,8 @@
-	REPO_NAME = how-to-get-your-attention.com
+REPO_NAME = how-to-get-your-attention.com
 BRANCH = main
 COMMIT_MESSAGE = "Auto commit"
 obj-m += Memory.o
-
 obj-m += wms.o 
-
 all:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
 
@@ -12,11 +10,12 @@ clean:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
 
 insert:
+	sudo insmod Memory.ko
 	sudo insmod wms.ko
 
 remove:
 	sudo rmmod wms
-
+	sudo rmmod Memory.ko
 log: 
 	dmesg
 push:
