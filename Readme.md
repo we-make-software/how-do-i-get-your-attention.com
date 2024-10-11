@@ -16,3 +16,4 @@ What I aim to develop is software that helps companies correct mistakes in their
 
 [Makefile Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/Make.md)
 [WMS Header Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/wms.header.md)
+[WMS Source Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/wms.source.md)
