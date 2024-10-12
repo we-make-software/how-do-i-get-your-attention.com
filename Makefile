@@ -27,8 +27,8 @@ log:
 
 push:
 	git add .
-	git commit -m $(COMMIT_MESSAGE)
-	git push origin $(BRANCH)
+	-git commit -m "Auto commit" || echo "Nothing to commit"
+	git push origin main
 clear: 
 	sudo dmesg -C
 
