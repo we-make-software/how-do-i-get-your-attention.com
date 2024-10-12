@@ -25,6 +25,9 @@ remove:
 log:
 	sudo dmesg -w
 
+login:
+	git remote set-url origin https://github.com/we-make-software/how-to-get-your-attention.com.git
+
 push:
 	git add .
 	-git commit -m "Auto commit" || echo "Nothing to commit"

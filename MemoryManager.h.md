@@ -1,3 +1,4 @@
+
 # MemoryManager.h
 
 This header file is central to managing and manipulating `WMS` structures in memory, following the principles established in `Memory.h`. The goal is to provide efficient, dynamic memory management for `WMS` entries, ensuring that memory is properly allocated, tracked, and freed when no longer needed.
@@ -26,5 +27,5 @@ Instead of exposing the `globalWMS` array directly, these functions ensure that 
 
 This header works in conjunction with `MemoryManagerInit.h`, which handles the setup and initialization of the memory management system. The system ensures that memory is properly allocated when needed and freed when no longer required, preventing memory leaks and optimizing resource use.
 
-For a detailed overview of the initialization process, refer to the [MemoryManagerInit.c Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/MemoryManagerInit.c.md).
+For a detailed overview of the initialization process, refer to the [MemoryManagerInit.h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/MemoryManagerInit.h.md).
 
