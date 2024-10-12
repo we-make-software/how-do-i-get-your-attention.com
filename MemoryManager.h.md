@@ -7,3 +7,4 @@ The `MemoryManagerInit.h` file plays a crucial role in initializing memory setti
 
 [MemoryManagerInit h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/MemoryManagerInit.h.md)
 
+Well in this a made a struct basic it need to be the globael struct but it cant be it need to get by pointer functions to get as poninter will be

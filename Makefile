@@ -1,6 +1,7 @@
 REPO_NAME = how-to-get-your-attention.com
 BRANCH = main
 COMMIT_MESSAGE = "Auto commit"
+obj-m += MemoryManager.o
 obj-m += Memory.o
 obj-m += wms.o 
 all:
@@ -12,12 +13,15 @@ clean:
 insert:
 	sudo rmmod wms || true
 	sudo rmmod Memory || true
+	sudo rmmod MemoryManager || true
+	sudo insmod MemoryManager.ko
 	sudo insmod Memory.ko
 	sudo insmod wms.ko
 
 remove:
 	sudo rmmod wms
 	sudo rmmod Memory
+	sudo rmmod MemoryManager
 log:
 	sudo dmesg -w
 
@@ -72,3 +76,33 @@ ch:
 		$(MAKE) c filename=$(filename); \
 		echo "Both header and source files for $(filename) have been created."; \
 	fi
+
+
+
+# List of modules
+modules = Memory MemoryManager wms
+
+# Unload modules in reverse order
+unload:
+	@echo "Unloading modules in reverse order..."
+	@for module in $(shell echo $(modules) | tr ' ' '\n' | tac); do \
+		echo "Removing $$module..."; \
+		sudo rmmod $$module || true; \
+	done
+	@echo "Cleaning the build directory..."
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+
+# Build and load modules in correct order
+load:
+	@echo "Building and loading modules..."
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+	@for module in $(modules); do \
+		echo "Inserting $$module.ko..."; \
+		sudo insmod $$module.ko; \
+	done
+	@echo "Monitoring dmesg output..."
+	sudo dmesg -w
+
+# Combine both unload and load
+reload: unload load
+	@echo "Modules reloaded successfully."
