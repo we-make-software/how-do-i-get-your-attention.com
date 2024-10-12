@@ -7,8 +7,7 @@ bool isMemoryAvailable(unsigned long memoryRequiredBytes) {
     if (available_bytes > 2147483648) {
         available_bytes -= 2147483648;
         return available_bytes >= memoryRequiredBytes;
-    }
-    else return false;
+    }else return false;
 }
 void waitForMemoryIsAvailable(unsigned long memoryRequiredBytes);
 void waitForMemoryIsAvailable(unsigned long memoryRequiredBytes) {
