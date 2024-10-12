@@ -1,3 +1,6 @@
 #pragma once
 #include "Memory.h"
-extern char * GetWMS(void);
+typedef struct WMS{
+    char *d;
+} WMS;
+extern WMS* GetWMS(void);

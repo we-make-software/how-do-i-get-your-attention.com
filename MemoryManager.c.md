@@ -1,13 +1,12 @@
 # MemoryManager.c
 
-
 ## Global Pointer: `globalWMS`
 
-The `globalWMS` pointer is a lightweight 8-byte structure — it doesn’t need to be any bigger than that. To ensure memory is available, we upgrade the pointer by calling:
+The `globalWMS` pointer references a dynamically sized structure (`WMS`). Since the size of `struct WMS` can vary, we allocate memory for it using:
 
 ```c
-waitForMemory(8);
+waitForMemory(sizeof(WMS));
 ```
 
-This function ensures the system waits until 8 bytes of RAM are ready for use. In a typical startup process, finding 8 bytes of RAM is no challenge — it would be quite unusual if the system couldn’t provide such a small amount!
+This ensures that the system waits until the required memory for the full `WMS` structure is available. During startup, memory allocation is usually not a problem, but this approach guarantees that enough memory is allocated based on the actual size of the structure.
 

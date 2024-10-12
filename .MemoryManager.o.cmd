@@ -1238,5 +1238,6 @@ deps_/root/we-make-software/MemoryManager.o := \
 $(deps_/root/we-make-software/MemoryManager.o):
 
 /root/we-make-software/MemoryManager.o: $(wildcard ./tools/objtool/objtool)
+#SYMVER GetWMS 0x2afdcc09
 #SYMVER MemoryManagerInit 0x4dfa74a5
 #SYMVER MemoryManagerExit 0x73ed9c8f

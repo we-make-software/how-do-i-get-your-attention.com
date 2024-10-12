@@ -1,3 +1,4 @@
+0x2afdcc09	GetWMS	/root/we-make-software/MemoryManager	EXPORT_SYMBOL	
 0x4dfa74a5	MemoryManagerInit	/root/we-make-software/MemoryManager	EXPORT_SYMBOL	
 0x73ed9c8f	MemoryManagerExit	/root/we-make-software/MemoryManager	EXPORT_SYMBOL	
 0x5981801b	waitForMemory	/root/we-make-software/Memory	EXPORT_SYMBOL	
