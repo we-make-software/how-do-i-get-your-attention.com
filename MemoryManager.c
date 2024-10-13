@@ -9,7 +9,7 @@ bool HaveWMS(const char*name){
             return true;
    return false;
 }
-EXPORT_SYMBOL(HaveWMS); 
+Export(HaveWMS); 
 static DEFINE_MUTEX(WMSMutex);
 bool RemoveWMS(const char* name) {
     mutex_lock(&WMSMutex);
@@ -46,7 +46,7 @@ bool RemoveWMS(const char* name) {
     mutex_unlock(&WMSMutex);
     return false;
 }
-EXPORT_SYMBOL(RemoveWMS); 
+Export(RemoveWMS); 
 WMS* AddWMS(const char*name){
    if(globalWMS)
      for (uint64_t i = 0; i < globalsize; i++) 
@@ -70,7 +70,7 @@ void MemoryManagerInit(){
     MemoryManagerExit();
     globalWMS = NULL;
 }
-EXPORT_SYMBOL(MemoryManagerInit); 
+Export(MemoryManagerInit); 
 void MemoryManagerExit() {
     if (globalWMS)
         for (uint64_t i = 0; i < globalsize; i++) 
@@ -88,5 +88,5 @@ void MemoryManagerExit() {
     globalWMS = NULL;
     globalsize = 0;
 }
-EXPORT_SYMBOL(MemoryManagerExit); 
+Export(MemoryManagerExit); 
 MODULE_METADATA(); 

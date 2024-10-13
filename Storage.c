@@ -1,4 +1,10 @@
 #include "StorageInit.h"
+void StorageInit(){
 
-extern void StorageInit();
-extern void StorageExit();
+}
+Export(StorageInit);
+void StorageExit(){
+
+}
+Export(StorageExit);
+MODULE_METADATA();

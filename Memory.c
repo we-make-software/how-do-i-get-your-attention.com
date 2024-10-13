@@ -23,5 +23,5 @@ void* waitForMemory(unsigned long memoryRequiredBytes){
     }
     return _kmalloc;
 }
-EXPORT_SYMBOL(waitForMemory); 
+Export(waitForMemory); 
 MODULE_METADATA();

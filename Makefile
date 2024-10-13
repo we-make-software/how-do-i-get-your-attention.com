@@ -1,27 +1,65 @@
 REPO_NAME = how-to-get-your-attention.com
 BRANCH = main
 COMMIT_MESSAGE = "Auto commit"
-obj-m += MemoryManager.o
-obj-m += Memory.o
-obj-m += wms.o 
-all:
+SERVICE_PATH = /etc/systemd/system/reload-modules.service
+SCRIPT_PATH = /path/to/reload_modules.sh
+
+# Define modules at the top
+modules = Storage Memory MemoryManager wms
+
+obj-m += $(modules:=.o)
+
+all: build check_service
+
+build:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
 
-clean:
+clean: remove_modules
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
 
-insert:
-	sudo rmmod wms || true
-	sudo rmmod Memory || true
-	sudo rmmod MemoryManager || true
-	sudo insmod MemoryManager.ko
-	sudo insmod Memory.ko
-	sudo insmod wms.ko
+check_service:
+	@if [ ! -f $(SERVICE_PATH) ]; then \
+		echo "Service file not found. Creating reload-modules.service..."; \
+		$(MAKE) insert_modules; \
+		$(MAKE) create_service; \
+		echo "Enabling and starting the reload-modules service..."; \
+		sudo systemctl daemon-reload; \
+		sudo systemctl enable reload-modules.service; \
+		sudo systemctl start reload-modules.service; \
+	else \
+		echo "Service file already exists. Inserting modules..."; \
+		$(MAKE) insert_modules; \
+	fi
 
-remove:
-	sudo rmmod wms
-	sudo rmmod Memory
-	sudo rmmod MemoryManager
+insert_modules:
+	@echo "Inserting kernel modules..."
+	@for module in $(modules); do \
+		sudo insmod $$module.ko || true; \
+	done
+
+remove_modules:
+	@echo "Removing kernel modules..."
+	@for module in $(modules); do \
+		sudo rmmod $$module || true; \
+	done
+
+create_service:
+	@echo "Creating the service file..."
+	@sudo bash -c 'echo "[Unit]" > $(SERVICE_PATH)'
+	@sudo bash -c 'echo "Description=Reload kernel modules" >> $(SERVICE_PATH)'
+	@sudo bash -c 'echo "DefaultDependencies=no" >> $(SERVICE_PATH)'
+	@sudo bash -c 'echo "Before=shutdown.target reboot.target halt.target" >> $(SERVICE_PATH)'
+	@sudo bash -c 'echo "After=multi-user.target" >> $(SERVICE_PATH)'
+	@sudo bash -c 'echo "" >> $(SERVICE_PATH)'
+	@sudo bash -c 'echo "[Service]" >> $(SERVICE_PATH)'
+	@sudo bash -c 'echo "Type=oneshot" >> $(SERVICE_PATH)'
+	@sudo bash -c 'echo "RemainAfterExit=true" >> $(SERVICE_PATH)'
+	@sudo bash -c 'echo "ExecStart=$(SCRIPT_PATH) start" >> $(SERVICE_PATH)'
+	@sudo bash -c 'echo "ExecStop=$(SCRIPT_PATH) stop" >> $(SERVICE_PATH)'
+	@sudo bash -c 'echo "" >> $(SERVICE_PATH)'
+	@sudo bash -c 'echo "[Install]" >> $(SERVICE_PATH)'
+	@sudo bash -c 'echo "WantedBy=multi-user.target" >> $(SERVICE_PATH)'
+
 log:
 	sudo dmesg -w
 
@@ -31,22 +69,14 @@ login:
 push:
 	git add .
 	-git commit -m "Auto commit" || echo "Nothing to commit"
-	git push origin main
+	git push origin $(BRANCH)
+
 clear: 
 	sudo dmesg -C
-
 
 # Target to pull changes
 pull:
 	git pull origin $(BRANCH)
-
-reload: remove clean all insert log
-
-play:all insert log
-
-stop: 
-	sudo rmmod wms || true && make clean
-
 
 # Command to generate .h and .h.md files
 h:
@@ -80,11 +110,6 @@ ch:
 		echo "Both header and source files for $(filename) have been created."; \
 	fi
 
-
-
-# List of modules
-modules = Memory MemoryManager wms
-
 # Unload modules in reverse order
 unload:
 	@echo "Unloading modules in reverse order..."
@@ -105,7 +130,3 @@ load:
 	done
 	@echo "Monitoring dmesg output..."
 	sudo dmesg -w
-
-# Combine both unload and load
-reload: unload load
-	@echo "Modules reloaded successfully."

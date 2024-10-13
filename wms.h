@@ -19,6 +19,8 @@
 #include <linux/namei.h>   
 #include <linux/mount.h> 
 #include "Memory.h"
+#define Export(symbol) EXPORT_SYMBOL(symbol)
+
 #ifndef MODULE_INFO_MACROS
 #define MODULE_INFO_MACROS
 #define MODULE_METADATA() \

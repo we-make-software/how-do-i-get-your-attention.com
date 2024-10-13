@@ -1,4 +1,4 @@
 #pragma once
 #include "Storage.h"
-extern void StorageInit();
-extern void StorageExit();
+extern void StorageInit(void);
+extern void StorageExit(void);
