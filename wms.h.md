@@ -1,6 +1,18 @@
-# Kernel Module Header Overview
+### Kernel Module Header Overview
+
+```c
+#pragma once
+#include "MemoryManager.h"
+```
 
 This header file sets the foundation for a robust and flexible kernel module, incorporating a variety of essential Linux kernel functionalities. By strategically including a range of kernel headers, this file ensures the module has access to critical system features while maintaining modularity and clarity in its structure.
+
+```c
+#define MODULE_METADATA() \
+    MODULE_LICENSE("GPL"); \
+    MODULE_DESCRIPTION("A Simple Kernel Module"); \
+    MODULE_AUTHOR("Pirasath Luxchumykanthan")
+```
 
 At the heart of the file is a custom macro that embeds key module metadata. This macro, defined only once, ensures the module complies with GPL licensing, provides a clear description, and credits the author. This is crucial for any kernel module, as it not only defines how the module integrates with the kernel but also communicates its purpose and authorship.
 
@@ -20,7 +32,45 @@ With the integration of the custom `Memory.init.h` file, the module’s architec
 
 ---
 
-# Understanding the `MODULE_METADATA` Macro
+### Logging Macros Overview
+
+In addition to the `MODULE_METADATA` macro, this file introduces custom logging macros to simplify logging different levels of messages in the kernel log:
+
+```c
+#define Info(fmt, ...) printk(KERN_INFO "[INFO] %s: " fmt "\n", __func__, ##__VA_ARGS__)
+#define Warning(fmt, ...) printk(KERN_WARNING "[WARNING] %s: " fmt "\n", __func__, ##__VA_ARGS__)
+#define Error(fmt, ...) printk(KERN_ERR "[ERROR] %s: " fmt "\n", __func__, ##__VA_ARGS__)
+```
+
+These macros standardize the logging format and ensure that each log entry is associated with a specific log level (Info, Warning, Error) and the function name where it was called. This provides an easy way to trace logs back to the exact location in the code, which is essential for debugging in kernel development.
+
+- **Info**: Used for informational messages.
+- **Warning**: Used for warning messages, indicating potential issues that need attention but are not critical.
+- **Error**: Used for error messages, typically indicating a failure or critical issue that requires intervention.
+
+By embedding the function name (`__func__`) into the log message, these macros ensure that the source of the message is always clear. This is particularly useful when debugging, as it allows developers to quickly identify which part of the code generated the log.
+
+Example usage:
+
+```c
+void StorageInit() {
+    Info("StorageInit called");
+}
+
+void StorageExit() {
+    Warning("StorageExit called with a potential issue");
+    Error("StorageExit encountered an error");
+}
+```
+
+### Understanding the `MODULE_METADATA` Macro
+
+```c
+#define MODULE_METADATA() \
+    MODULE_LICENSE("GPL"); \
+    MODULE_DESCRIPTION("A Simple Kernel Module"); \
+    MODULE_AUTHOR("Pirasath Luxchumykanthan")
+```
 
 The `MODULE_METADATA` macro serves as a critical component in defining the identity and compliance of the kernel module within the Linux ecosystem. When developing a kernel module, it's essential to embed certain metadata that not only informs the system about the module's purpose but also aligns it with the open-source philosophy and licensing requirements that Linux stands for.
 
@@ -33,3 +83,8 @@ The **description**, declared through `MODULE_DESCRIPTION()`, is the module’s 
 The **author** field, set with `MODULE_AUTHOR()`, is a hallmark of open-source development, where the creators of the code are rightfully acknowledged for their contributions. Listing the author's name, such as "Pirasath Luxchumykanthan," not only gives credit but also provides a point of contact for anyone needing to reach out for support or further collaboration. It builds a sense of ownership and accountability, fostering trust within the user base.
 
 In essence, the `MODULE_METADATA` macro encapsulates the spirit of good software development practice in the Linux kernel world: open licensing, clear communication, and proper attribution. By embedding this metadata directly into the module, the developer not only ensures that the module integrates smoothly with the kernel's regulatory framework but also makes the module more approachable, transparent, and reliable for the broader community.
+```
+
+This now includes explanations for both the `MODULE_METADATA` macro and your custom logging macros (`Info`, `Warning`, `Error`). Let me know if this covers everything or if you'd like further refinement!
+
+```
