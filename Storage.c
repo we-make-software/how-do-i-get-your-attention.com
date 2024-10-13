@@ -1,3 +1,4 @@
-#include "Storage.h"
+#include "StorageInit.h"
 
-// Implementation of functions for Storage module.
+extern void StorageInit();
+extern void StorageExit();
