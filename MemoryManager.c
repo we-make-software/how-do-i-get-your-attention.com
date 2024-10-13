@@ -55,29 +55,38 @@ WMS* AddWMS(const char*name){
    mutex_lock(&WMSMutex);        
    globalsize++;        
    WMS** temp = waitForMemory(globalsize * sizeof(WMS*));
-   memcpy(temp, globalWMS, (globalsize - 1) * sizeof(WMS*));
+   if (globalsize > 1)
+     memcpy(temp, globalWMS, (globalsize - 1) * sizeof(WMS*));
    WMS* newWMS = waitForMemory(sizeof(WMS));
    newWMS->name = waitForMemory(strlen(name) + 1); 
    strncpy(newWMS->name, name, strlen(name) + 1);
    temp[globalsize - 1] = newWMS;
    globalWMS = temp;
    mutex_unlock(&WMSMutex);
-   return NULL;
+   return newWMS;
 }
 EXPORT_SYMBOL(AddWMS); 
 void MemoryManagerInit(){
     MemoryManagerExit();
     globalWMS = NULL;
-    printk(KERN_INFO "OK\n");
-
 }
 EXPORT_SYMBOL(MemoryManagerInit); 
-void MemoryManagerExit(){
-  if (globalWMS) {
-        kfree(globalWMS);  
-        globalWMS = NULL;
-        printk(KERN_INFO "MemoryManagerExit: Memory freed.\n");
-  }
+void MemoryManagerExit() {
+    if (globalWMS)
+        for (uint64_t i = 0; i < globalsize; i++) 
+            if (globalWMS[i]) {
+                if (globalWMS[i]->name)
+                    kfree(globalWMS[i]->name);
+                if (globalWMS[i]->size)
+                    kfree(globalWMS[i]->size);
+                if (globalWMS[i]->data)
+                    kfree(globalWMS[i]->data);
+                kfree(globalWMS[i]);
+            }
+    if (globalWMS)
+        kfree(globalWMS);
+    globalWMS = NULL;
+    globalsize = 0;
 }
 EXPORT_SYMBOL(MemoryManagerExit); 
 MODULE_METADATA(); 

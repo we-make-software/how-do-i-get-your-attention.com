@@ -3,7 +3,7 @@
 typedef struct WMS {
     char *name; 
     uint64_t *size;
-    char *data;
+    void *data;
 } WMS;
 
 extern bool HaveWMS(const char*name);
