@@ -4,7 +4,7 @@ COMMIT_MESSAGE = "Auto commit"
 SERVICE_PATH = /etc/systemd/system/reload-modules.service
 SCRIPT_PATH = /path/to/reload_modules.sh
 
-# Check if WeMakeSoftware.modules exists. If it does, read from it; if not, default to WeMakeSoftware.
+
 modules := $(if $(wildcard WeMakeSoftware.modules),$(shell cat WeMakeSoftware.modules),WeMakeSoftware)
 
 obj-m += $(modules:=.o)

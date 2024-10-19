@@ -1,41 +1,32 @@
-# WeMakeSoftware.c
+#include "WeMakeSoftware.h"
+#define WeMakeSoftwareModules "tt.modules" 
+static int __init WeMakeSoftwareInit(void)
+{
+  struct file *WeMakeSoftwareModulesFile;
+    
+    // Open the file using filp_open
+    WeMakeSoftwareModulesFile = filp_open(WeMakeSoftwareModules, 0 , 0);
+  if (IS_ERR(WeMakeSoftwareModulesFile)) {
+        long err = PTR_ERR(WeMakeSoftwareModulesFile);  // Get the error code
+        printk(KERN_ERR "Error: Could not open file: %s, error code: %ld\n", WeMakeSoftwareModules, err);
+        return 0;  // Return the error code
+    }
 
-This file contains the core logic for the kernel module, including the initialization and cleanup functions. It relies on the definitions provided in `WeMakeSoftware.h`.
+/*
+    if (IS_ERR(WeMakeSoftwareModulesFile)) {
+        Info("Error: Could not open file");
+        return PTR_ERR(WeMakeSoftwareModulesFile);  // Return the error
+    }
+*/
+    Info("Module initialized successfully");
+    return 0;  // Return 0 to indicate successful loading
+}
 
-### Key Functions:
-
-- **WeMakeSoftwareInit**: 
-  This function is called when the module is loaded. It logs an informational message using the `Info` macro and returns `0` to indicate successful initialization.
-  
-  ```c
-  static int __init WeMakeSoftwareInit(void)
-  {
-      Info("Module initialized successfully");
-      return 0;  // Return 0 to indicate successful loading
-  }
-  ```
-
-- **WeMakeSoftwareExit**: 
-  This function is called when the module is removed from the kernel. Currently, it does not perform any specific cleanup tasks.
-  
-  ```c
-  static void __exit WeMakeSoftwareExit(void)
-  {
-      // Cleanup code (if needed) would go here
-  }
-  ```
-
-### Module Initialization and Exit:
-The `module_init()` and `module_exit()` macros are used to define the entry and exit points for the kernel module.
-
-```c
+// Cleanup function (runs when the module is removed)
+static void __exit WeMakeSoftwareExit(void)
+{
+    printk(KERN_INFO "Simple Module: Unloaded successfully\n");
+}
 module_init(WeMakeSoftwareInit);
 module_exit(WeMakeSoftwareExit);
-```
-
-### Metadata:
-The `MODULE_METADATA()` macro is used to include essential information about the module, such as:
-- The license (`GPL`)
-- A brief description
-- The author
-
+MODULE_METADATA();
