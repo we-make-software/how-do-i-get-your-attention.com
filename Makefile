@@ -4,8 +4,8 @@ COMMIT_MESSAGE = "Auto commit"
 SERVICE_PATH = /etc/systemd/system/reload-modules.service
 SCRIPT_PATH = /path/to/reload_modules.sh
 
-# Define modules at the top
-modules = Storage Memory MemoryManager wms
+# Check if WeMakeSoftware.modules exists. If it does, read from it; if not, default to WeMakeSoftware.
+modules := $(if $(wildcard WeMakeSoftware.modules),$(shell cat WeMakeSoftware.modules),WeMakeSoftware)
 
 obj-m += $(modules:=.o)
 
@@ -74,7 +74,6 @@ push:
 clear: 
 	sudo dmesg -C
 
-# Target to pull changes
 pull:
 	git pull origin $(BRANCH)
 
@@ -83,18 +82,19 @@ h:
 	@if [ -z "$(filename)" ]; then \
 		echo "Please provide a filename. Usage: make h filename=<filename>"; \
 	else \
-		echo "#pragma once\n#include \"Memory.h\"" > $(filename).h; \
-		echo "# $(filename).h" > $(filename).h.md; \
+		HEADER_FILE=$$(head -n 1 WeMakeSoftware.modules); \
+		echo "#pragma once\n#include \"$$HEADER_FILE.h\"" > $(filename).h; \
+		echo "# $(filename).h based on $$HEADER_FILE.h" > $(filename).h.md; \
 		echo "\n# [$(filename) h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/$(filename).h.md)" >> Readme.md; \
 		echo "Header file $(filename).h, $(filename).h.md, and documentation link added."; \
 	fi
 
-# Command to generate .c and .c.md files
 c:
 	@if [ -z "$(filename)" ]; then \
 		echo "Please provide a filename. Usage: make c filename=<filename>"; \
 	else \
-		echo "#include \"Memory.h\"\n\n// Implementation of functions for $(filename) module." > $(filename).c; \
+		HEADER_FILE=$$(head -n 1 WeMakeSoftware.modules); \
+		echo "#include \"$$HEADER_FILE.h\"\n\n// Implementation of functions for $(filename) module." > $(filename).c; \
 		echo "# $(filename).c" > $(filename).c.md; \
 		echo "\n# [$(filename) c Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/$(filename).c.md)" >> Readme.md; \
 		echo "Source file $(filename).c, $(filename).c.md, and documentation link added."; \
@@ -110,7 +110,6 @@ ch:
 		echo "Both header and source files for $(filename) have been created."; \
 	fi
 
-# Unload modules in reverse order
 unload:
 	@echo "Unloading modules in reverse order..."
 	@for module in $(shell echo $(modules) | tr ' ' '\n' | tac); do \
@@ -120,7 +119,6 @@ unload:
 	@echo "Cleaning the build directory..."
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
 
-# Build and load modules in correct order
 load:
 	@echo "Building and loading modules..."
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules

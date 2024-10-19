@@ -16,30 +16,9 @@ What I aim to develop is software that helps companies correct mistakes in their
 
 # [Makefile Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/Make.md)
 
-# [WMS h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/wms.h.md) 
+# [WeMakeSoftware h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/WeMakeSoftware.h.md)
 
-## [MemoryManagerInit h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/MemoryManagerInit.h.md)
-
-## [StorageInit h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/StorageInit.h.md)
-
-
-### [Memory h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/Memory.h.md)
-
-#### [MemoryManager h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/MemoryManager.h.md)
-
-### [Storage h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/Storage.h.md)
-
-#### [StorageManager h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/StorageManager.h.md)
-
-# [WMS c Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/wms.c.md)  
-
-## [Memory c Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/Memory.c.md)
-
-### [MemoryManager c Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/MemoryManager.c.md)
-
-## [Storage c Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/Storage.c.md)
-
-### [StorageManager c Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/StorageManager.c.md)
+# [WeMakeSoftware c Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/WeMakeSoftware.c.md)
 
 
 __Unsorted__
