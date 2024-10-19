@@ -2,35 +2,48 @@
 
 ## Overview of Memory Management
 
-The `MemoryManager` module handles the dynamic management of `WMS` structures, ensuring memory is allocated, accessed, and freed efficiently. This is critical in environments where memory needs can vary, and it’s important to control the size and availability of memory.
+The `MemoryManager` module handles the dynamic management of `MemoryManager` structures, ensuring memory is allocated, accessed, and freed efficiently. This is crucial in environments where memory demands can fluctuate, and it’s essential to manage the size and availability of memory carefully.
 
-### Global Pointer: `globalWMS`
+### Global Pointer: `globalMemoryManager`
 
-The `globalWMS` pointer is a dynamically managed array that holds multiple `WMS` structures. These structures are created, stored, and freed based on specific operations such as adding or removing a `WMS`. The size of this array can grow or shrink depending on how many valid entries are stored.
+The `globalMemoryManager` pointer is a dynamically managed array that holds multiple `MemoryManager` structures. These structures are created, stored, and freed based on specific operations such as adding or removing a `MemoryManager`. The size of this array can grow or shrink depending on how many valid entries are stored, ensuring that memory is used efficiently without unnecessary allocation.
 
-### Adding a New `WMS`
+---
 
-When a new `WMS` entry needs to be added, the system first checks if an entry with the same name already exists. If it does, that entry is returned immediately, preventing duplicate entries.
+## Adding a New `MemoryManager`
 
-If no existing entry is found, the array's size is increased, and a new entry is created. The necessary memory for this new entry is dynamically allocated. The system ensures that the correct amount of memory is allocated for the new `WMS` entry and its associated fields, such as the name. This avoids memory issues, especially when handling varying string lengths for the `name`.
+When a new `MemoryManager` entry needs to be added, the system first checks if an entry with the same `name` already exists. If it does, that entry is returned immediately, preventing duplicate entries.
 
-### Removing an Existing `WMS`
+If no existing entry is found, the array’s size is increased, and a new entry is created. Memory is dynamically allocated for this new entry, including its name. The system ensures that the correct amount of memory is allocated for the new `MemoryManager` entry and its associated fields. This helps avoid memory issues, especially when handling varying string lengths for the `name`.
 
-When an entry is removed, the system carefully ensures that all dynamically allocated memory associated with that `WMS` is freed. This includes not just the structure itself but also any additional fields like `name`, `size`, and `data`, which may have been dynamically allocated during the entry's lifetime.
+---
 
-After removing an entry, the system checks how many valid entries remain. If no valid entries are left, the entire `globalWMS` array is freed, releasing the memory back to the system. If some entries remain, the array is resized to fit the remaining valid entries, ensuring no excess memory is wasted.
+## Removing an Existing `MemoryManager`
 
-### Synchronization with Mutex
+When a `MemoryManager` entry is removed, the system carefully ensures that all dynamically allocated memory associated with that entry is freed. This includes:
+- The `name` field (dynamically allocated string)
+- The `size` field (pointer to a 64-bit integer)
+- The `data` field (dynamically allocated content)
 
-To ensure thread safety, a mutex (`WMSMutex`) is used when adding or removing entries. This guarantees that no other process can modify the `globalWMS` array while it is being resized or updated. This avoids race conditions and ensures that the operations on `globalWMS` happen sequentially and without conflict.
+Once the memory is freed, the system checks how many valid entries remain in the `globalMemoryManager` array. If no valid entries are left, the entire array is freed, releasing all memory back to the system. If some entries remain, the array is resized to fit the remaining valid entries, ensuring that no excess memory is wasted.
 
-### Initialization and Cleanup
+---
 
-The `MemoryManagerInit` function is responsible for setting up the environment for managing `WMS` structures. It clears out any previous entries and ensures that the system starts with a clean state.
+## Synchronization with Mutex
 
-On the other hand, the `MemoryManagerExit` function handles proper cleanup, ensuring that all dynamically allocated memory is freed when the system shuts down or when memory management is no longer needed.
+To ensure thread safety, a mutex (`MemoryManagerMutex`) is used when adding or removing entries. This guarantees that no other process can modify the `globalMemoryManager` array while it is being resized or updated. The mutex ensures that operations on `globalMemoryManager` happen sequentially, preventing race conditions or memory corruption.
 
-### Importance of Dynamic Memory Management
+---
 
-By dynamically managing memory through careful allocation and deallocation, this module ensures efficient use of system resources. It prevents memory leaks by freeing allocated memory when no longer needed, and it optimizes the use of memory by resizing the array of `WMS` entries as necessary.
+## Initialization and Cleanup
+
+- **MemoryManagerInit**: Responsible for setting up the environment for managing `MemoryManager` structures. It ensures that the system starts with a clean state by clearing out any previous entries.
+  
+- **MemoryManagerExit**: Handles proper cleanup by freeing all dynamically allocated memory when the system shuts down or when memory management is no longer needed. This function ensures that there are no memory leaks by releasing memory for each `MemoryManager` entry and the global array itself.
+
+---
+
+## Importance of Dynamic Memory Management
+
+By dynamically managing memory through careful allocation and deallocation, this module ensures efficient use of system resources. It prevents memory leaks by freeing allocated memory when no longer needed and optimizes the system’s memory usage by resizing the array of `MemoryManager` entries as necessary.
 

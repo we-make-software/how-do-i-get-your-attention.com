@@ -18,6 +18,8 @@
 #include <linux/path.h>     
 #include <linux/namei.h>   
 #include <linux/mount.h> 
+#include <linux/uuid.h>
+#include <linux/string.h>
 #include "Memory.h"
 #define Export(symbol) EXPORT_SYMBOL(symbol)
 #define Info(func, fmt, ...) printk(KERN_INFO "[INFO] %s: " fmt "\n", func, ##__VA_ARGS__)

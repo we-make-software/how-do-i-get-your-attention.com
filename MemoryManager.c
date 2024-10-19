@@ -1,6 +1,6 @@
 #include "MemoryManager.h"
 #include "MemoryManagerInit.h"
-WMS** globalMemoryManager;
+MemoryManager** globalMemoryManager;
 uint64_t globalsize=0;
 bool HaveMemoryManager(const char*name){
    if(globalMemoryManager)
@@ -10,9 +10,9 @@ bool HaveMemoryManager(const char*name){
    return false;
 }
 Export(HaveMemoryManager); 
-static DEFINE_MUTEX(WMSMutex);
-bool RemoveMemoryManager(const char* name) {
-    mutex_lock(&WMSMutex);
+static DEFINE_MUTEX(MemoryManagerMutex);
+bool RemoveMemoryManager(const char*name) {
+    mutex_lock(&MemoryManagerMutex);
     if (globalMemoryManager)
         for (uint64_t i = 0; i < globalsize; i++) 
             if (globalMemoryManager[i] && strcmp(globalMemoryManager[i]->name, name) == 0) {
@@ -32,7 +32,7 @@ bool RemoveMemoryManager(const char* name) {
                     kfree(globalMemoryManager);  
                     globalMemoryManager = NULL;
                 } else if (resizeGlobalSize != globalsize) {
-                    WMS** temp = waitForMemory(resizeGlobalSize * sizeof(WMS*));
+                    MemoryManager** temp = waitForMemory(resizeGlobalSize * sizeof(MemoryManager*));
                     uint64_t c = 0;
                     for (i = 0; i < globalsize; i++)
                         if (globalMemoryManager[i])
@@ -40,30 +40,30 @@ bool RemoveMemoryManager(const char* name) {
                     globalMemoryManager = temp;
                 }
                 globalsize = resizeGlobalSize;
-                mutex_unlock(&WMSMutex);
+                mutex_unlock(&MemoryManagerMutex);
                 return true;
             }
-    mutex_unlock(&WMSMutex);
+    mutex_unlock(&MemoryManagerMutex);
     return false;
 }
 Export(RemoveMemoryManager); 
-WMS* AddMemoryManager(const char*name){
+MemoryManager* AddMemoryManager(const char*name){
    if(globalMemoryManager)
      for (uint64_t i = 0; i < globalsize; i++) 
         if (globalMemoryManager[i]&&strcmp(globalMemoryManager[i]->name, name) == 0) 
            return globalMemoryManager[i];
-   mutex_lock(&WMSMutex);        
+   mutex_lock(&MemoryManagerMutex);        
    globalsize++;        
-   WMS** temp = waitForMemory(globalsize * sizeof(WMS*));
+   MemoryManager** temp = waitForMemory(globalsize * sizeof(MemoryManager*));
    if (globalsize > 1)
-     memcpy(temp, globalMemoryManager, (globalsize - 1) * sizeof(WMS*));
-   WMS* newWMS = waitForMemory(sizeof(WMS));
-   newWMS->name = waitForMemory(strlen(name) + 1); 
-   strncpy(newWMS->name, name, strlen(name) + 1);
-   temp[globalsize - 1] = newWMS;
+     memcpy(temp, globalMemoryManager, (globalsize - 1) * sizeof(MemoryManager*));
+   MemoryManager* newMemoryManager = waitForMemory(sizeof(MemoryManager));
+   newMemoryManager->name = waitForMemory(strlen(name) + 1); 
+   strncpy(newMemoryManager->name, name, strlen(name) + 1);
+   temp[globalsize - 1] = newMemoryManager;
    globalMemoryManager = temp;
-   mutex_unlock(&WMSMutex);
-   return newWMS;
+   mutex_unlock(&MemoryManagerMutex);
+   return newMemoryManager;
 }
 EXPORT_SYMBOL(AddMemoryManager); 
 void MemoryManagerInit(){
