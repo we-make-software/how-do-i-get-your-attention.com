@@ -23,8 +23,6 @@
 #define Info(func, fmt, ...) printk(KERN_INFO "[INFO] %s: " fmt "\n", func, ##__VA_ARGS__)
 #define Warning(func, fmt, ...) printk(KERN_WARNING "[WARNING] %s: " fmt "\n", func, ##__VA_ARGS__)
 #define Error(func, fmt, ...) printk(KERN_ERR "[ERROR] %s: " fmt "\n", func, ##__VA_ARGS__)
-
-
 #ifndef MODULE_INFO_MACROS
 #define MODULE_INFO_MACROS
 #define MODULE_METADATA() \

@@ -28,6 +28,8 @@ What I aim to develop is software that helps companies correct mistakes in their
 
 ##### [Storage h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/Storage.h.md)
 
+###### [StorageManager h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/StorageManager.h.md)
+
 # [WMS c Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/wms.c.md)  
 
 ## [Memory c Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/Memory.c.md)
@@ -36,5 +38,9 @@ What I aim to develop is software that helps companies correct mistakes in their
 
 ### [Storage c Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/Storage.c.md)
 
+#### [StorageManager c Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/StorageManager.c.md)
 __Unsorted__
+
+
+
 

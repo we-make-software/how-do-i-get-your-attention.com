@@ -6,6 +6,6 @@ typedef struct WMS {
     void *data;
 } WMS;
 
-extern bool HaveWMS(const char*name);
-extern bool RemoveWMS(const char*name);
-extern WMS* AddWMS(const char*name);
+extern bool HaveMemoryManager(const char*name);
+extern bool RemoveMemoryManager(const char*name);
+extern WMS* AddMemoryManager(const char*name);

@@ -1,14 +1,14 @@
 # StorageInit.h
 
-The `StorageInit.h` file provides two external functions, `StorageInit()` and `StorageExit()`, which are utilized in `wms.c`. 
+The `StorageInit.h` file provides three external functions, `StorageInit()`, `StorageExit()`, and `CentralProcessingUnitTaskGetStorageSize()`, which are utilized in `wms.c`.
 
-- `StorageInit()` is responsible for initializing the storage system.
-- `StorageExit()` is responsible for cleaning up and exiting the storage system.
+- **`StorageInit()`** is responsible for initializing the storage system.
+- **`StorageExit()`** is responsible for cleaning up and exiting the storage system.
+- **`CentralProcessingUnitTaskGetStorageSize()`** returns the total size of the disk used by the CPU task, helping to manage read/write operations.
 
 These functions are only required within `wms.c`.
 
-
-
+---
 
 In the future, it’s essential to recall how to manage disks for **wms** using the `dd` command effectively. The disk image stored at `/root/wms.disk` is used for **wms**, and here’s a step-by-step guide on how to handle copying partitions into this disk image.
 
@@ -40,7 +40,7 @@ sudo dd if=/dev/sda2 of=/root/wms.disk bs=512 count=<count_of_sda2> oflag=append
 - **`oflag=append`**: Ensures that new data is appended to the existing disk image rather than overwriting it.
 - **`conv=notrunc`**: Prevents truncation of the existing file content, ensuring all current data remains intact.
 
-If we running multiple `dd` processes or other tasks at the same time, remember to monitor system resources carefully. Use tools like `top` and `ionice` to adjust CPU and I/O priorities to prevent `dd` from consuming too much CPU or disk bandwidth. This ensures that **wms** runs smoothly even while disk operations are in progress.
+If you are running multiple `dd` processes or other tasks at the same time, remember to monitor system resources carefully. Use tools like `top` and `ionice` to adjust CPU and I/O priorities to prevent `dd` from consuming too much CPU or disk bandwidth. This ensures that **wms** runs smoothly even while disk operations are in progress.
 
 ```bash
 sudo renice 19 <dd_process_pid>  # Lower CPU priority of the dd process

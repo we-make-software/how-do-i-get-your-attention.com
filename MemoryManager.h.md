@@ -12,10 +12,10 @@ The `WMS` structure defines the core data that the memory manager will handle. E
 
 ## Managing `WMS` Entries
 
-The functions provided in this header (`HaveWMS`, `RemoveWMS`, and `AddWMS`) allow for efficient interaction with `WMS` entries:
-- **`HaveWMS(const char* name)`**: Checks if a `WMS` entry with a specific name already exists, ensuring that no duplicate entries are created.
-- **`RemoveWMS(const char* name)`**: Safely removes a `WMS` entry by freeing all dynamically allocated memory associated with it, including the `name`, `size`, and `data` fields.
-- **`AddWMS(const char* name)`**: Adds a new `WMS` entry, dynamically allocating memory for each of its components and ensuring that the `globalWMS` array is resized properly to accommodate new entries.
+The functions provided in this header (`HaveMemoryManager`, `RemoveMemoryManager`, and `AddMemoryManager`) allow for efficient interaction with `WMS` entries:
+- **`HaveMemoryManager(const char* name)`**: Checks if a `WMS` entry with a specific name already exists, ensuring that no duplicate entries are created.
+- **`RemoveMemoryManager(const char* name)`**: Safely removes a `WMS` entry by freeing all dynamically allocated memory associated with it, including the `name`, `size`, and `data` fields.
+- **`AddMemoryManager(const char* name)`**: Adds a new `WMS` entry, dynamically allocating memory for each of its components and ensuring that the `globalWMS` array is resized properly to accommodate new entries.
 
 ## Global Structure and Access by Pointer
 
