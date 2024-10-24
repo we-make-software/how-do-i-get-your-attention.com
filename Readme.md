@@ -14,11 +14,24 @@ I invest in myself so I can provide the best software solutions for companies. W
 
 What I aim to develop is software that helps companies correct mistakes in their systems. I’m planning to build a full cloud-based system—covering storage, websites, reviews, social media, and everything needed to promote a company.
 
-# [Makefile Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/Make.md)
 
-# [WeMakeSoftware h Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/WeMakeSoftware.h.md)
+If you think about it, a Makefile is a tool that can help developers become more advanced and improve their skills. It's the Makefile.
 
-# [WeMakeSoftware c Documentation](https://github.com/we-make-software/how-to-get-your-attention.com/blob/main/WeMakeSoftware.c.md)
+Well, we can set a standard. By creating WeMakeSoftware.h, we're focusing on software, not hardware. It's called WeMakeSoftware.h because we're not making hardware, which is already developed or being upgraded by high-tech companies.
+
+Today, many people use Linux for everything from web servers to VoIP. But when it comes to programming languages, C is the closest to the Linux kernel. I use Ubuntu because it's pretty "high tech," but C is the most powerful language close to the kernel.
+
+Why make something bigger when you can create it yourself? I'm not sure, but we can try. Okay, the Linux file system is pretty good. We can create a disk that is bound to multiple disks, depending on whether you need RAID or not. 
+
+I believe we need RAID. Why? Because if one disk fails, the other disk still has the data. This reminds me that we need to ensure redundancy and reliability in our systems.
+
+When we build something correctly, like the first server, it gives a sense of accomplishment.
+
+Have you ever had that feeling where you seem to be doing the same code or following the same routine forever? I have a great explanation for network data.
+
+If we want learn IEEE 802.3, we can create a simple hook in Linux that will call IEEE802_3_In. We also have IEEE802_3_Out for outgoing packets.
 
 
-__Unsorted__
+| Preamble | Destination MAC address | Source MAC address | Type/Length | User Data | Frame Check Sequence (FCS) |
+|----------|-------------------------|--------------------|-------------|-----------|----------------------------|
+| 8        | 6                       | 6                  | 2           | 46 - 1500 | 4                          |
