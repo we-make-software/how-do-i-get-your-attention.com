@@ -1,4 +1,4 @@
-BRANCH = mainmake
+BRANCH = main
 
 # Define the module name
 MODULE_NAME = WeMakeSoftware
