@@ -29,23 +29,4 @@ When we build something correctly, like the first server, it gives a sense of ac
 
 Have you ever had that feeling where you seem to be doing the same code or following the same routine forever? I have a great explanation for network data.
 
-I think `waitForMemory` is an important function, which is why I made it global throughout the system, but not in Linux. That's why I used `EXPORT_SYMBOL(waitForMemory);` for that function. However, it's different inside `IEEE802_3Out`, where we use `waitForMemoryForSKB`, which is not global and doesn't need to be. I understand if you noticed that I didn’t free the `skb`, but don’t worry—`dev_queue_xmit` will handle freeing it. No need to be concerned.
-
-
-In the `Hook` function, we first check if the incoming packet is from an Ethernet device and ensure the packet length is valid. If the device isn't recognized as Ethernet or the packet doesn't meet the required conditions, it gets accepted without further processing. Otherwise, the function proceeds to pass the packet to `IEEE802_3In`, where the actual packet processing happens. A frame is created for the incoming data before handing it off to `IEEE802_3In`. After the packet is processed, it's allowed to continue through the network stack, ensuring smooth integration into the system.
-
-
-In the `IEEE802_3Out` function, we first allocate memory for the packet to be sent. The function uses a loop that attempts to send the packet, retrying up to 100 times if the transmission fails. Each time a transmission attempt is made, the loop checks whether the maximum number of retries has been reached. If the transmission is successful, the packet is sent and the function returns a success status. However, if the retry limit is exceeded without success, the packet is freed from memory, and the function returns a failure status. This ensures the system makes multiple attempts to send the packet, but avoids endless retries by capping the limit at 100.
-
-If we want learn IEEE 802.3, we can create a simple hook in Linux that will call IEEE802_3In. We also have IEEE802_3Out for outgoing packets.
-
-
-WeMakeSoftware Frame basic content what come in we use the Hook to setup this.
-
-
-Basic IEEE 802.3 Design
-
-| Destination MAC address | Source MAC address | Type/Length | User Data | 
-|-------------------------|--------------------|-------------|-----------|
-| 6                       | 6                  | 2           | 46 - 1500 |
 

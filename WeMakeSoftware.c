@@ -1,76 +1,22 @@
-#include "WeMakeSoftware.h"
-#include <linux/netfilter.h>
+#include <linux/module.h>
+#include <linux/kernel.h>
+#define FrameSuccess NET_RX_DROP   
+#define FrameIgnore NET_RX_SUCCESS
+#define FrameError -EIO
 #include <linux/netdevice.h>
 #include <linux/skbuff.h>
-#include <linux/if_ether.h> 
-void IEEE802_3Out(struct net_device *dev, unsigned char *data, size_t len);
-void IEEE802_3In(struct Frame *frame);
-void IEEE802_3In(struct Frame *frame) {
- 
+#include <linux/sysinfo.h> 
+#include <linux/delay.h>
+#include <linux/gfp.h>  
+void* waitForMemory(unsigned long memoryRequiredBytes);
+int SendFrame(int id, int size, unsigned char *data);
+
+static int ReceiveFrame(int id,int size,unsigned char *data) {
+
+    return FrameIgnore;
 }
 
 
-
-unsigned int (*hook)(void *priv, struct sk_buff *skb, const struct nf_hook_state *state);
-struct Frame* CreateFrameByHook(unsigned char *data, size_t len, struct net_device *dev) {
-    struct Frame *frame = waitForMemory(sizeof(struct Frame));
-    frame->data = waitForMemory(len);
-    memcpy(frame->data, data, len);
-    frame->len = len;
-    frame->dev = dev;
-    return frame;
-}
-static unsigned int Hook(void *priv, struct sk_buff *skb, const struct nf_hook_state *state) {
-    struct net_device *dev = state->in; 
-    if (strncmp(dev->name, "eth", 3) != 0 || skb->len < sizeof(struct ethhdr) || !skb->data)
-    return NF_ACCEPT;
-    IEEE802_3In(CreateFrameByHook(skb->data, skb->len, state->in)); 
-    return NF_ACCEPT; 
-}
-
-void waitForMemoryIsAvailable(unsigned long memoryRequiredBytes);
-struct sk_buff* waitForMemoryForSKB(size_t len) {
-    struct sk_buff *skb;
-    waitForMemoryIsAvailable(len);
-    skb = alloc_skb(len, GFP_KERNEL);
-    while (!skb) {
-        waitForMemoryIsAvailable(len);
-        skb = alloc_skb(len, GFP_KERNEL);
-    }
-
-    return skb;
-}
-void IEEE802_3Out(struct net_device *dev, unsigned char *data, size_t len) {
-    struct sk_buff *skb = waitForMemoryForSKB(len);
-    skb_put(skb, len);
-    memcpy(skb->data, data, len);
-    skb->dev = dev;
-    int CountDownReTry = 100;
-    while(!dev_queue_xmit(skb))
-    if (!CountDownReTry--) {
-        kfree_skb(skb);
-        return -1;
-        }
-    return 0;
-}
-
-static struct nf_hook_ops nfho;
-static int __init WeMakeSoftwareInit(void) {
-    nfho.hooknum = NF_INET_PRE_ROUTING;
-    nfho.pf = PF_INET; 
-    nfho.hook = Hook;
-    nf_register_net_hook(&init_net, &nfho); 
-    return 0;   
-}
-
-// Function that runs when the module is removed
-static void __exit WeMakeSoftwareExit(void) {
-    nf_unregister_net_hook(&init_net, &nfho);
-}
-
-// Define module entry and exit points
-module_init(WeMakeSoftwareInit);
-module_exit(WeMakeSoftwareExit);
 struct sysinfo si;
 bool isMemoryAvailable(unsigned long memoryRequiredBytes);
 bool isMemoryAvailable(unsigned long memoryRequiredBytes) {
@@ -81,7 +27,7 @@ bool isMemoryAvailable(unsigned long memoryRequiredBytes) {
         return available_bytes >= memoryRequiredBytes;
     }else return false;
 }
-
+void waitForMemoryIsAvailable(unsigned long memoryRequiredBytes);
 void waitForMemoryIsAvailable(unsigned long memoryRequiredBytes) {
     while (!isMemoryAvailable(memoryRequiredBytes*2)) udelay(10);
 }
@@ -95,8 +41,50 @@ void* waitForMemory(unsigned long memoryRequiredBytes){
     }
     return _kmalloc;
 }
-EXPORT_SYMBOL(waitForMemory);
-MODULE_LICENSE("GPL"); 
-MODULE_AUTHOR("how-do-i-get-your-attention.com developer"); 
-MODULE_DESCRIPTION("Kernel module for WeMakeSoftware services");  
+
+int SendFrame(int id, int size, unsigned char *data) {
+    waitForMemoryIsAvailable(size);
+    struct sk_buff* skb = alloc_skb(size, GFP_ATOMIC);
+    while (!skb) {
+        waitForMemoryIsAvailable(size); 
+        skb = alloc_skb(size, GFP_ATOMIC); 
+    }
+    skb->dev = dev_get_by_index(&init_net, id);
+    memcpy( skb_put(skb, size), data, size);
+    for (int attempts = 0; attempts < 100; attempts++) {
+        if (dev_queue_xmit(skb) >= 0) {
+            dev_put(skb->dev);
+            return FrameSuccess; 
+        }
+        udelay(1); 
+    }
+    kfree_skb(skb); 
+    dev_put(skb->dev);
+    return FrameError;
+}
+
+
+
+
+static int ethhdr_handlerIn(struct sk_buff *skb, struct net_device *dev,struct packet_type *pt, struct net_device *orig_dev) {
+    return ReceiveFrame(dev->ifindex, skb->len, skb_mac_header(skb));
+}
+
+static struct packet_type wms_proto;
+static int __init wms_init(void) {
+    wms_proto.type = htons(ETH_P_ALL);
+    wms_proto.func = ethhdr_handlerIn;
+    dev_add_pack(&wms_proto);
+    return 0;
+}
+
+static void __exit wms_exit(void) {
+    dev_remove_pack(&wms_proto);
+}
+
+module_init(wms_init);
+module_exit(wms_exit);
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Pirasath Luxchumykanthan");
+MODULE_DESCRIPTION("WeMakeSoftware Kernel Network");
 MODULE_VERSION("1.0");
