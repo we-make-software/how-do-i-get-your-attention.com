@@ -63,7 +63,16 @@ EtherType helps identify the protocol encapsulated in the payload of an Ethernet
 Since we are focusing exclusively on public network protocols, we only need to consider [**IPv4 (2048)**](https://www.rfc-editor.org/rfc/rfc791) and [**IPv6 (34525)**](https://www.rfc-editor.org/rfc/rfc8200.html). This field is effectively the same as the **EtherType**.
 
 
-### IPv4 (2048)
+### IPv4 (2048) & IPv6 (34525)  First bytes from Payload
 
-
-### IPv6 (34525)
+| Field                     | IPv4       | IPv6       |
+|---------------------------|------------|------------|
+| Version                   | ✅ 0100    | ✅ 0110    |
+| IHL (Internet Header Length) | ✅ 4 bits | ❌         |
+| Total Length              | ✅ 16 bits | ✅ 16 bits (Payload Length) |
+| TTL / Hop Limit           | ✅ 8 bits  | ✅ 8 bits  |
+| Protocol / Next Header    | ✅ 8 bits  | ✅ 8 bits  |
+| Header Checksum           | ✅ 16 bits | ❌         |
+| Source Address            | ✅ 32 bits | ✅ 128 bits |
+| Destination Address       | ✅ 32 bits | ✅ 128 bits |
+| Options / Extension Headers | ✅ Optional | ❌ (Handled separately) |

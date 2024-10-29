@@ -57,6 +57,7 @@ static int ReceiveFrame(int id,int size,unsigned char *data) {
     if (size > 14 && memcmp(data, MacAddressZeroes, 6) != 0&&memcmp(data + 6, MacAddressZeroes, 6) != 0)
     switch ((data[12] << 8) | data[13]){
         case 2048: 
+          ShowBinary("First byte of IPv4 payload in binary", 14, 15, data);
         break;
         case 34525:
         break;
