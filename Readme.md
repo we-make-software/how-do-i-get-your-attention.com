@@ -60,3 +60,8 @@ If the Destination MAC Address and Source MAC Address suggest the packet is loca
 
 EtherType helps identify the protocol encapsulated in the payload of an Ethernet frame. A full list of EtherTypes is publicly available on the IANA website: [IEEE 802 Numbers](https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml). The first column displays the decimal value, which indicates the specific EtherType in use.
 
+
+
+
+Since we are focusing exclusively on public network protocols, we only need to consider [**IPv4 (2048)**](https://www.rfc-editor.org/rfc/rfc791) and [**IPv6 (34525)**](https://www.rfc-editor.org/rfc/rfc8200.html). Although we’re calling it **IPAddressType**, this field is the same as the **EtherType**.
+
