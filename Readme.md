@@ -1,74 +1,62 @@
-If we establish clear ground rules for development, it will allow everyone to create the best software possible, especially in open-source environments.
+# We-Make-Software
 
-By setting up a solid structure using extern, EXPORT_SYMBOL(), and properly organizing header files, you're essentially building a developer toolkit. This toolkit enables the creation of modular, reusable components that can be shared across kernel modules and easily reused in future projects. This is how you're laying the foundation for an efficient development workflow.
+## Purpose
 
-Having access to files within our own project is incredibly powerful. Skilled developers will understand the strength of this approach. However, this level of insight goes beyond what an amateur developer might grasp. It requires deep knowledge of modular design and kernel development, and I want you to consider that.
+Establishing clear ground rules for development is essential, especially in open-source environments, as it empowers everyone to build high-quality software. By setting up a robust development framework with `extern`, `EXPORT_SYMBOL()`, and well-structured header files, we’re creating a developer toolkit. This toolkit allows for modular, reusable components across kernel modules, setting the foundation for efficient, scalable development workflows.
 
-This software is meant to encourage everyone to use Linux. It's foundational in that regard.
+Having access to files within our own project brings significant power to skilled developers who understand the strength of this approach. This level of insight often requires a deep understanding of modular design and kernel development, which goes beyond amateur skill levels.
 
-Now, think about this: how much do you pay to have a university-educated professional in your company? Where I work, I earn 170 Danish kroner before tax, without pension benefits. It’s fair, because I can significantly improve the company.
+This software is intended to encourage everyone to explore Linux and its potential in modular software development.
 
-I work in the IT section, and although I can develop things myself at my own pace, it’s not always clear what others can do. But if I build an open-source project, I would consider collaborating with the community. I could host the project on GitHub or another platform, and possibly gain sponsorship from developers, organizations, or companies that support open-source initiatives.
+## Professional and Personal Insights
 
-I invest in myself so I can provide the best software solutions for companies. What I can create for everyone, where I work, can be beneficial to others too. For anyone looking to sell products online, run promotions, or engage with social media, I can integrate these solutions into my project, providing clear and concise descriptions in the code. The code will begin with WeMakeSoftware.c, as the company will be named "We-Make-Software." I plan to elevate "We-Make-Software" as an online-based company.
+Consider the cost of employing a university-educated developer. I earn 170 DKK/hour before tax, without pension benefits. This wage is fair, as I bring considerable value to the company. Working in IT, I can independently create and develop tools, though sometimes it’s unclear what others in the team can contribute.
 
-What I aim to develop is software that helps companies correct mistakes in their systems. I’m planning to build a full cloud-based system—covering storage, websites, reviews, social media, and everything needed to promote a company.
+However, if I build this project as an open-source initiative, I would consider collaborating with the community by hosting it on GitHub or another platform. This approach could attract sponsorship from developers, organizations, or companies that support open-source innovation.
 
+Investing in this project enables me to provide valuable software solutions that benefit both my company and the broader community. For businesses engaging in e-commerce, promotions, or social media, I plan to integrate tools that simplify these tasks. The code will start with `WeMakeSoftware.c`, as the company will be branded as "We-Make-Software." This company aims to be an online-based provider of comprehensive software solutions.
 
-If you think about it, a Makefile is a tool that can help developers become more advanced and improve their skills. It's the Makefile.
+## Vision and Goals
 
-Well, we can set a standard. By creating WeMakeSoftware.h, we're focusing on software, not hardware. It's called WeMakeSoftware.h because we're not making hardware, which is already developed or being upgraded by high-tech companies.
+I intend to build software that helps companies identify and correct system issues. This project will evolve into a full cloud-based system, covering storage, websites, reviews, social media integration, and everything necessary to promote and manage a business online.
 
-Today, many people use Linux for everything from web servers to VoIP. But when it comes to programming languages, C is the closest to the Linux kernel. I use Ubuntu because it's pretty "high tech," but C is the most powerful language close to the kernel.
+Think of a **Makefile** as a developer tool that can help enhance programming skills. With `WeMakeSoftware.h`, we’re focusing on software development specifically—since hardware is already being innovated upon by high-tech companies. The name `WeMakeSoftware.h` reflects this focus.
 
-Why make something bigger when you can create it yourself? I'm not sure, but we can try. Okay, the Linux file system is pretty good. We can create a disk that is bound to multiple disks, depending on whether you need RAID or not. 
+## Why Linux and C?
 
-I believe we need RAID. Why? Because if one disk fails, the other disk still has the data. This reminds me that we need to ensure redundancy and reliability in our systems.
+Many rely on Linux for tasks ranging from web servers to VoIP. C remains the closest language to the Linux kernel, making it the most powerful option for system-level development. I use Ubuntu due to its advanced features, but C is integral to building kernel-related solutions.
 
-When we build something correctly, like the first server, it gives a sense of accomplishment.
+## Networking and Redundancy
 
-Have you ever had that feeling where you seem to be doing the same code or following the same routine forever? I have a great explanation for network data.
+For disk management, Linux offers flexibility. You can create disks bound to multiple physical drives with or without RAID. I believe RAID is essential for redundancy and reliability. Proper system redundancy ensures that data is safe even if a drive fails.
 
+Building the first server correctly is a source of accomplishment—it’s a testament to doing things right from the start.
 
-If wee look indside the Data Link Layer Frame Structures
+## Networking Layer Details
 
-We follow .:
+The Data Link Layer Frame Structure contains the following components:
 
-Destination MAC Address (6 bytes)
-Source MAC Address (6 bytes)
-EtherType (2 bytes)
-Payload (up to 1500 bytes)
-Frame Check Sequence (4 bytes)
+- **Destination MAC Address**: 6 bytes
+- **Source MAC Address**: 6 bytes
+- **EtherType**: 2 bytes
+- **Payload**: Up to 1500 bytes
+- **Frame Check Sequence (FCS)**: 4 bytes
 
-Frame Check Sequence also call FCS it made from the network device.  
+The FCS, computed by the network device, is used to detect transmission errors. When a frame is sent, the sender calculates the FCS based on the frame contents. This error-detecting code, crucial at the Data Link Layer (Layer 2) of the OSI model, ensures data integrity during transmission. Since the FCS is processed by the network interface card (NIC) before reaching the kernel, it’s outside our direct control. Therefore, our focus remains on processing the relevant headers and payloads in the kernel.
 
+### Local and Non-Local Packets
 
-In examining the Data Link Layer Frame Structures, we see the following components:
+If the Destination MAC Address and Source MAC Address suggest the packet is local, it indicates the packet is handled within the server. Since we’re focused on non-local packets, a check is implemented to verify if these addresses are zero or non-zero.
 
-- **Destination MAC Address** (6 bytes)
-- **Source MAC Address** (6 bytes)
-- **EtherType** (2 bytes)
-- **Payload** (up to 1500 bytes)
-- **Frame Check Sequence (FCS)** (4 bytes)
+### Ethernet Frame Representation
 
-The Frame Check Sequence (FCS) is computed by the network device and is used to detect errors that may have occurred during the transmission of data across a network. When a frame is transmitted, the sender calculates the FCS based on the contents of the frame. 
+| Field                   | Binary Representation                                              |
+|-------------------------|--------------------------------------------------------------------|
+| Destination MAC Address | 10101000 10100001 01011001 11000000 01010110 00100100             |
+| Source MAC Address      | 00000000 01010000 01010110 10101000 10100010 11001000             |
+| EtherType               | 00001000 00000000                                                 |
 
-The FCS is an error-detecting code used in networking protocols, primarily at the Data Link Layer (Layer 2) of the OSI model, to ensure the integrity of transmitted data. While the FCS plays an important role in error detection, its handling is often outside our direct control in the kernel, as it is processed by the network interface card (NIC) before the data reaches our code.
+### EtherType Reference
 
-Focusing on the FCS in our networking code may not be necessary since the kernel manages this aspect automatically. Our attention is better directed towards processing the relevant headers and payloads of the packets.
-
-
-If the Destination MAC Address and Source MAC Address indicate that the packet is local, it means that the packet is being handled within the server itself. Since we focus on non-local packets, I have implemented a check to determine if these addresses are zero or not.
-
-
-
-10101000 10100001 01011001 11000000 01010110 00100100 Destination MAC Address
-00000000 01010000 01010110 10101000 10100010 11001000 Source MAC Address
-00001000 00000000 EtherType
-
-
-
-We can use EtherType to identify the protocol encapsulated in the payload of an Ethernet frame. A comprehensive list of EtherTypes can be found at the IANA website: [IEEE 802 Numbers](https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml). This resource is publicly available and easy to understand.
-
-In this list, the first column displays the decimal number, which indicates the specific EtherType we are working with.
+EtherType helps identify the protocol encapsulated in the payload of an Ethernet frame. A full list of EtherTypes is publicly available on the IANA website: [IEEE 802 Numbers](https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml). The first column displays the decimal value, which indicates the specific EtherType in use.
 
