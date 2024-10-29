@@ -41,7 +41,6 @@ void* waitForMemory(unsigned long memoryRequiredBytes){
     }
     return _kmalloc;
 }
-
 int SendFrame(int id, int size, unsigned char *data) {
     waitForMemoryIsAvailable(size);
     struct sk_buff* skb = alloc_skb(size, GFP_ATOMIC);
@@ -62,14 +61,9 @@ int SendFrame(int id, int size, unsigned char *data) {
     dev_put(skb->dev);
     return FrameError;
 }
-
-
-
-
 static int ethhdr_handlerIn(struct sk_buff *skb, struct net_device *dev,struct packet_type *pt, struct net_device *orig_dev) {
     return ReceiveFrame(dev->ifindex, skb->len, skb_mac_header(skb));
 }
-
 static struct packet_type wms_proto;
 static int __init wms_init(void) {
     wms_proto.type = htons(ETH_P_ALL);
@@ -77,11 +71,9 @@ static int __init wms_init(void) {
     dev_add_pack(&wms_proto);
     return 0;
 }
-
 static void __exit wms_exit(void) {
     dev_remove_pack(&wms_proto);
 }
-
 module_init(wms_init);
 module_exit(wms_exit);
 MODULE_LICENSE("GPL");
