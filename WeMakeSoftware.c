@@ -1,5 +1,8 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
+#define Info(fmt, ...) printk(KERN_INFO "[INFO] %s: " fmt "\n", __func__, ##__VA_ARGS__)
+#define Warning(fmt, ...) printk(KERN_WARNING "[WARNING] %s: " fmt "\n", __func__, ##__VA_ARGS__)
+#define Error(fmt, ...) printk(KERN_ERR "[ERROR] %s: " fmt "\n", __func__, ##__VA_ARGS__)
 #define FrameSuccess NET_RX_DROP   
 #define FrameIgnore NET_RX_SUCCESS
 #define FrameError -EIO
@@ -11,7 +14,13 @@
 void* waitForMemory(unsigned long memoryRequiredBytes);
 int SendFrame(int id, int size, unsigned char *data);
 
+
+unsigned char ReceiveFrameZeroes[14] = {0}
 static int ReceiveFrame(int id,int size,unsigned char *data) {
+    if (size > 14&&memcmp(data, ReceiveFrameZeroes, 14) != 0) {
+
+
+    }
 
     return FrameIgnore;
 }
