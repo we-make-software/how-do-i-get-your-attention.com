@@ -6,6 +6,7 @@
 #define FrameSuccess NET_RX_DROP   
 #define FrameIgnore NET_RX_SUCCESS
 #define FrameError -EIO
+
 #include <linux/netdevice.h>
 #include <linux/skbuff.h>
 #include <linux/sysinfo.h> 
@@ -13,14 +14,49 @@
 #include <linux/gfp.h>  
 void* waitForMemory(unsigned long memoryRequiredBytes);
 int SendFrame(int id, int size, unsigned char *data);
-
-
-unsigned char ReceiveFrameZeroes[14] = {0}
-static int ReceiveFrame(int id,int size,unsigned char *data) {
-    if (size > 14&&memcmp(data, ReceiveFrameZeroes, 14) != 0) {
-
-
+static void ShowBinary(const char *title, int from, int to, unsigned char *data) {
+    // Check if the data is valid before processing
+    if (!data) {
+        pr_err("Invalid data pointer. Cannot show binary.\n");
+        return;
     }
+
+    // Ensure 'from' and 'to' are within valid range
+    if (from < 0 || to < from) {
+        pr_err("Invalid range specified: from %d to %d.\n", from, to);
+        return;
+    }
+
+    // Dynamically allocate the output buffer based on the size
+    int size = to - from + 1; // Calculate the number of bytes to print
+    char *binary_output = kmalloc(8 * size + 1, GFP_KERNEL); // Allocate enough space for binary output
+    if (!binary_output) {
+        pr_err("Failed to allocate memory for binary output.\n");
+        return; // Handle memory allocation failure
+    }
+
+    int index = 0;
+    printk("%s (from %d to %d):\n", title, from, to); // Print the title with the range
+
+    for (int i = from; i <= to; i++) {
+        for (int j = 7; j >= 0; j--) { 
+            binary_output[index++] = ((data[i] >> j) & 1) ? '1' : '0'; 
+        }
+        binary_output[index++] = ' '; // Add space after each byte
+    }
+
+    binary_output[index - 1] = '\0'; // Null-terminate the string
+    printk("%s\n", binary_output); // Print the entire binary output
+    
+    kfree(binary_output); // Free the allocated memory
+}
+
+
+unsigned char MacAddressZeroes[6] = {0};
+static int ReceiveFrame(int id,int size,unsigned char *data) {
+  if (size > 14 && memcmp(data, MacAddressZeroes, 6) != 0&&memcmp(data + 6, MacAddressZeroes, 6) != 0) {
+    ShowBinary("Frame Data in Binary", 0, 14, data); 
+  }
 
     return FrameIgnore;
 }

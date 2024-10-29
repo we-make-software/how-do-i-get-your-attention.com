@@ -30,3 +30,45 @@ When we build something correctly, like the first server, it gives a sense of ac
 Have you ever had that feeling where you seem to be doing the same code or following the same routine forever? I have a great explanation for network data.
 
 
+If wee look indside the Data Link Layer Frame Structures
+
+We follow .:
+
+Destination MAC Address (6 bytes)
+Source MAC Address (6 bytes)
+EtherType (2 bytes)
+Payload (up to 1500 bytes)
+Frame Check Sequence (4 bytes)
+
+Frame Check Sequence also call FCS it made from the network device.  
+
+
+In examining the Data Link Layer Frame Structures, we see the following components:
+
+- **Destination MAC Address** (6 bytes)
+- **Source MAC Address** (6 bytes)
+- **EtherType** (2 bytes)
+- **Payload** (up to 1500 bytes)
+- **Frame Check Sequence (FCS)** (4 bytes)
+
+The Frame Check Sequence (FCS) is computed by the network device and is used to detect errors that may have occurred during the transmission of data across a network. When a frame is transmitted, the sender calculates the FCS based on the contents of the frame. 
+
+The FCS is an error-detecting code used in networking protocols, primarily at the Data Link Layer (Layer 2) of the OSI model, to ensure the integrity of transmitted data. While the FCS plays an important role in error detection, its handling is often outside our direct control in the kernel, as it is processed by the network interface card (NIC) before the data reaches our code.
+
+Focusing on the FCS in our networking code may not be necessary since the kernel manages this aspect automatically. Our attention is better directed towards processing the relevant headers and payloads of the packets.
+
+
+If the Destination MAC Address and Source MAC Address indicate that the packet is local, it means that the packet is being handled within the server itself. Since we focus on non-local packets, I have implemented a check to determine if these addresses are zero or not.
+
+
+
+10101000 10100001 01011001 11000000 01010110 00100100 Destination MAC Address
+00000000 01010000 01010110 10101000 10100010 11001000 Source MAC Address
+00001000 00000000 EtherType
+
+
+
+We can use EtherType to identify the protocol encapsulated in the payload of an Ethernet frame. A comprehensive list of EtherTypes can be found at the IANA website: [IEEE 802 Numbers](https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml). This resource is publicly available and easy to understand.
+
+In this list, the first column displays the decimal number, which indicates the specific EtherType we are working with.
+
