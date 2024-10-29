@@ -63,3 +63,7 @@ EtherType helps identify the protocol encapsulated in the payload of an Ethernet
 Since we are focusing exclusively on public network protocols, we only need to consider [**IPv4 (2048)**](https://www.rfc-editor.org/rfc/rfc791) and [**IPv6 (34525)**](https://www.rfc-editor.org/rfc/rfc8200.html). Although we refer to it as **IPAddressType**, this field is effectively the same as the **EtherType**.
 
 
+### IPv4 (2048)
+
+
+### IPv6 (34525)
