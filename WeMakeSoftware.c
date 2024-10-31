@@ -57,8 +57,11 @@ static int ReceiveFrame(int id, int size, unsigned char *data) {
     !(data[0] | data[1] | data[2] | data[3] | data[4] | data[5]) &&
     !(data[6] | data[7] | data[8] | data[9] | data[10] | data[11]))
     switch (data[14] >> 4) { 
-        case 4:  
-        //https://www.rfc-editor.org/rfc/rfc791 
+        case 4: 
+        if((data[14] & 15)>=5){
+            
+            //https://www.rfc-editor.org/rfc/rfc791 
+        }
         break;
         case 6:  
         //https://www.rfc-editor.org/rfc/rfc8200.html)
