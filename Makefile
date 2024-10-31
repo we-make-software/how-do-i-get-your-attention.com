@@ -27,7 +27,10 @@ log:
 	
 deploy:insert log	
 
+stop: remove clean clear
+
 reset: remove clear deploy
+
 
 login:
 	git remote set-url origin https://github.com/we-make-software/how-to-get-your-attention.com.git

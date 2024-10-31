@@ -55,6 +55,7 @@ If the Destination and Source MAC Addresses indicate a local packet, it’s hand
 | Destination MAC Address | 10101000 10100001 01011001 11000000 01010110 00100100             |
 | Source MAC Address      | 00000000 01010000 01010110 10101000 10100010 11001000             |
 | EtherType               | 00001000 00000000                                                 |
+| Payload               | Read IPv4 (2048) & IPv6 (34525) First Bytes from Payload |
 
 EtherType identifies the protocol in the payload of an Ethernet frame. A complete EtherType list is available on the IANA website: [IEEE 802 Numbers](https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml). The first column shows the decimal value indicating the specific EtherType in use.
 
@@ -76,13 +77,8 @@ We focus on public network protocols, specifically [**IPv4 (2048)**](https://www
 | Destination Address       | ✅ 32 bits | ✅ 128 bits          |
 | Options / Extension Headers | ✅ Optional | ✅ Extension Headers |
 
+## data[14] >> 4 IPv4
+
 Both IPv4 and IPv6 have a version field: for IPv4, it is 4, and for IPv6, it is 6.
 
-In IPv4, the IHL (Internet Header Length) has a minimum value of 5 and a maximum of 15. This value determines the start of the data following the IPv4 (2048) header.
-
-In IPv4 and IPv6 headers, specific fields serve **Quality of Service (QoS)** and **traffic prioritization** purposes. Although named differently—**Type of Service** in IPv4 and **Traffic Class** in IPv6—they serve similar functions:
-
-- **Packet Prioritization**: Both fields allow network devices to prioritize packets, managing traffic flow for critical or time-sensitive data, such as VoIP or video streaming.
-- **Congestion Management**: These fields support **Explicit Congestion Notification (ECN)**, signaling network congestion to dynamically adjust traffic flow and prevent packet loss.
-
-**Type of Service** in IPv4 aligns with **Differentiated Services (DiffServ)** standards, while **Traffic Class** in IPv6 was designed with DiffServ in mind, providing a streamlined implementation. Both fields aid in packet prioritization and congestion management, ensuring efficient data flow across the network.
+## Byte 15

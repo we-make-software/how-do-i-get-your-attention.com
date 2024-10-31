@@ -1,11 +1,10 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
-#define Info(fmt, ...) printk(KERN_INFO "[INFO] %s: " fmt "\n", __func__, ##__VA_ARGS__)
-#define Warning(fmt, ...) printk(KERN_WARNING "[WARNING] %s: " fmt "\n", __func__, ##__VA_ARGS__)
-#define Error(fmt, ...) printk(KERN_ERR "[ERROR] %s: " fmt "\n", __func__, ##__VA_ARGS__)
+#include <linux/types.h>
 #define FrameSuccess NET_RX_DROP   
 #define FrameIgnore NET_RX_SUCCESS
 #define FrameError -EIO
+
 
 #include <linux/netdevice.h>
 #include <linux/skbuff.h>
@@ -14,65 +13,63 @@
 #include <linux/gfp.h>  
 void* waitForMemory(unsigned long memoryRequiredBytes);
 int SendFrame(int id, int size, unsigned char *data);
-static void ShowBinary(const char *title, int from, int to, unsigned char *data) {
-    // Check if the data is valid before processing
-    if (!data) {
-        pr_err("Invalid data pointer. Cannot show binary.\n");
-        return;
-    }
-
-    // Ensure 'from' and 'to' are within valid range
-    if (from < 0 || to < from) {
-        pr_err("Invalid range specified: from %d to %d.\n", from, to);
-        return;
-    }
-
-    // Dynamically allocate the output buffer based on the size
-    int size = to - from + 1; // Calculate the number of bytes to print
-    char *binary_output = kmalloc(8 * size + 1, GFP_KERNEL); // Allocate enough space for binary output
-    if (!binary_output) {
-        pr_err("Failed to allocate memory for binary output.\n");
-        return; // Handle memory allocation failure
-    }
-
+/*Binary test*/
+void PrintBytesBinary(const char *title, const unsigned char *data, int from, int to) {
     int index = 0;
-    printk("%s (from %d to %d):\n", title, from, to); // Print the title with the range
+    int buf_size = strlen(title) + 8 * (to - from + 1) + (to - from) + 2; // Calculate buffer size
+    char *buffer = kmalloc(buf_size, GFP_KERNEL);
+    if (!buffer) return;  // Handle memory allocation failure
 
+    // Copy the title
+    strcpy(buffer, title);
+    index = strlen(title);
+    buffer[index++] = ':';
+    buffer[index++] = ' ';
+
+    // Create binary representation
     for (int i = from; i <= to; i++) {
-        for (int j = 7; j >= 0; j--) { 
-            binary_output[index++] = ((data[i] >> j) & 1) ? '1' : '0'; 
+        for (int j = 7; j >= 0; j--) {
+            buffer[index++] = ((data[i] >> j) & 1) ? '1' : '0';
         }
-        binary_output[index++] = ' '; // Add space after each byte
+        buffer[index++] = ' '; // Add space after each byte
     }
+    buffer[index - 1] = '\0'; // Null-terminate the string
 
-    binary_output[index - 1] = '\0'; // Null-terminate the string
-    printk("%s\n", binary_output); // Print the entire binary output
-    
-    kfree(binary_output); // Free the allocated memory
+    // Print the binary string to the kernel log
+    printk(KERN_INFO "%s\n", buffer);
+
+    kfree(buffer); // Free the allocated memory
 }
 
 
-unsigned char MacAddressZeroes[6] = {0};
-static int ReceiveFrame(int id,int size,unsigned char *data) {
-    if (size > 14 && memcmp(data, MacAddressZeroes, 6) != 0&&memcmp(data + 6, MacAddressZeroes, 6) != 0)
-    switch ((data[12] << 8) | data[13]){
-        case 2048: 
-        if(data[14] >> 4 == 4 && ((data[14] & 15) >= 5)){
-            ShowBinary("binary", 14, 15, data);
 
-        }
-        return FrameSuccess;
-        case 34525:
-        if(data[14] >> 4 == 4){
-          ShowBinary("binary", 14, 15, data);
-        
-        }
-        return FrameSuccess;
+
+/**/
+
+//printk(KERN_INFO "Value: %d\n", value);
+//printk(KERN_INFO "Value in hex: %x\n", value);
+//printk(KERN_INFO "Message: %s\n", message);
+static int ReceiveFrame(int id, int size, unsigned char *data) {
+    if (((size >= 34 && (data[12] << 8) | data[13]==2048)||
+    (size >= 54 && (data[12] << 8) | data[13]==34525))&&
+    !(data[0] & 2) && 
+    !(data[6] & 2) &&  
+    !(data[0] | data[1] | data[2] | data[3] | data[4] | data[5]) &&
+    !(data[6] | data[7] | data[8] | data[9] | data[10] | data[11]))
+    switch (data[14] >> 4) { 
+        case 4:  
+        //https://www.rfc-editor.org/rfc/rfc791 
+        break;
+        case 6:  
+        //https://www.rfc-editor.org/rfc/rfc8200.html)
+        break;
     }
+
+    //Data only need to be free if FrameSuccess or FrameError
+
+
     return FrameIgnore;
 }
-
-
 struct sysinfo si;
 bool isMemoryAvailable(unsigned long memoryRequiredBytes);
 bool isMemoryAvailable(unsigned long memoryRequiredBytes) {
