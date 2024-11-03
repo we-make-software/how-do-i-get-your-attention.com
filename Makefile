@@ -1,7 +1,10 @@
 BRANCH = main
 
-# Define the module name
+
 MODULE_NAME = WeMakeSoftware
+USER_SERVICE_PATH = /etc/systemd/system/$(MODULE_NAME).service
+EXECUTABLE_PATH = /root/how-to-get-your-attention.com/User
+
 
 obj-m += $(MODULE_NAME).o
 
@@ -23,7 +26,7 @@ clear:
 	sudo dmesg -C
 
 log:
-	sudo dmesg -w
+	sudo dmesg -w 
 	
 deploy:insert log	
 
@@ -43,3 +46,4 @@ push:
 
 pull:
 	git pull origin $(BRANCH)
+
