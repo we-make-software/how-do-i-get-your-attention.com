@@ -31,4 +31,21 @@ Linux offers flexibility for disk management, allowing for drives bound to multi
 Building the first server correctly is a testament to doing things right from the start.
 
 
-iF YOU GET A PACKED
+#### Further Information
+
+Basic programming in IEEE 802.3 in C is a foundational element. We-Make-Software.com aims to build an open-source project for IEEE 802.3, beginning with our initial build version.
+
+
+__________ 
+
+# This is what we see:
+
+When data enters our network card, it follows the IEEE 802.3 standard, a foundational protocol widely used in networking. Packets come in various types, often identified by an Ethertype, which is essential for firewalls worldwide to manage and control network traffic.
+
+We only accept data that is more than 42 bytes.
+
+Our goal is to monitor and provide tasks for clients. We offer a variety of services, which can be paid directly to We-Make-Software to support clients. This is our firewall. We adhere to standards for IPv4 packets as defined by RFC 791 and RFC 8200. Our solution is open source, but we only publish it when we have the time and resources to do so.
+
+Because we want to be a valuable tool for you, we made the choices we did.
+
+V 0.0.0.0
