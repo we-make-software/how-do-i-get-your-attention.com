@@ -20,12 +20,8 @@ struct IEE802_3Buffer {
 struct Frame{
     struct Frame*Previous;
     struct sk_buff*skb; 
-    struct net_device*dev; 
-    struct packet_type*pt;
+    int id; 
     struct IEE802_3Buffer*IEE802_3Buffer;
     struct Frame*Next;
 };
 
-extern void OpenFrame(void);
-extern int CloseFrame(struct Frame* frame);
-extern int DropFrame(struct Frame* frame);
