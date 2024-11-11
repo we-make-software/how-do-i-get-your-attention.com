@@ -19,48 +19,48 @@ char*CreateStandard(struct Frame*frame,uint16_t version,uint16_t section);
 
 char*GetStandard(struct Frame*frame,uint16_t version,uint16_t section){
     if(!frame->Standards)return NULL;
-    struct Standard*current=frame->Standards;
-    while (current){
-        if(current->Version==version&&current->Section==section)return current->Data;
-        current=current->Previous;
+    struct Standard*this=frame->Standards;
+    while(this){
+        if(this->Version==version&&this->Section==section)return this->Data;
+        this=this->Previous;
     }
     return NULL;
 }
 int CloseStandard(struct Frame*frame,uint16_t version,uint16_t section){
     if (!frame||!frame->Standards)return NET_RX_DROP; 
-    struct Standard*current=frame->Standards;
-    while (current)
+    struct Standard*this=frame->Standards;
+    while (this)
     {
-        if (current->Version==version&&current->Section==section){
-            if(current->Previous)current->Previous->Next=current->Next;
-            if(current->Next)current->Next->Previous=current->Previous;
-            if(frame->Standards==current)
-                if(current->Previous)frame->Standards=current->Previous;
+        if (this->Version==version&&this->Section==section){
+            if(this->Previous)this->Previous->Next=this->Next;
+            if(this->Next)this->Next->Previous=this->Previous;
+            if(frame->Standards==this){
+                if(this->Previous)frame->Standards=this->Previous;
                 else frame->Standards=NULL;
-            kfree(current);
+            }
+            kfree(this);
             return NET_RX_SUCCESS; 
         }
-        current = current->Previous;
+        this=this->Previous;
     }
     return NET_RX_DROP; 
 }
 char*CreateStandard(struct Frame*frame,uint16_t version,uint16_t section){
-    struct Standard*current=frame->Standards;
-    while (current)
+    struct Standard*this=frame->Standards;
+    while (this)
     {
-        if(current->Version==version&&current->Section==section)return NULL; 
-        current=current->Previous;
+        if(this->Version==version&&this->Section==section)return NULL; 
+        this=this->Previous;
     }
-    struct Standard*standard=waitForMemory(sizeof(struct Standard));
-    if(!standard)return NULL;
-    standard->Version=version;
-    standard->Section=section;
-    standard->Next=standard->Previous=NULL;
+    if(!(this=waitForMemory(sizeof(struct Standard))))return NULL;
+    this->Version=version;
+    this->Section=section;
+    this->Next=this->Previous=NULL;
     if(frame->Standards){
-        frame->Standards->Next=standard;
-        standard->Previous=frame->Standards;
+        frame->Standards->Next=this;
+        this->Previous=frame->Standards;
     }
-    return(frame->Standards=standard)->Data;
+    return(frame->Standards=this)->Data;
 }
 int CloseFrame(struct Frame*frame) {
     if(!frame) return NET_RX_SUCCESS;
@@ -70,11 +70,12 @@ int CloseFrame(struct Frame*frame) {
         frame->Next->Previous = frame->Previous;
     if (frame==Frames) 
         Frames=frame->Previous?frame->Previous:NULL;
-    struct Standard*current=frame->Standards;
-    while (current)
+    struct Standard*this=frame->Standards;
+    while (this)
     {
-        kfree(current);
-        current = current->Previous;
+        struct Standard*whileCurrent=this;
+        this=whileCurrent->Previous;
+        kfree(whileCurrent);
     }
     frame->Standards=NULL;
     kfree(frame);
@@ -135,7 +136,7 @@ void Print(const char*title,const unsigned char*data,int from,int to){
     int index=strlen(title);
     buffer[index++]=58;
     buffer[index++]=32;
-    for(int i=from;i<=to i++){
+    for(int i=from;i<=to;i++){
         for (int j=7;j>= 0;j--)buffer[index++]=((data[i]>>j)&1)?49:48;
         buffer[index++]=32;
     }

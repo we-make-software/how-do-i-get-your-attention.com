@@ -13,7 +13,7 @@ extern int RFC791In(struct Frame*frame);
 extern int RFC826In(struct Frame*frame);
 extern int RFC8200In(struct Frame*frame);
 extern int IEE802_3In(struct Frame*frame);
-int IEE802_3In(struct Frame*frame) {
+int IEE802_3In(struct Frame*frame){
     switch((frame->IEE802_3Buffer->EtherType&65280)>>8|(frame->IEE802_3Buffer->EtherType&255)<<8){
         case 2048:return RFC791In(frame);
         case 2054:return RFC826In(frame); 
