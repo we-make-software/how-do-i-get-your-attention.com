@@ -8,18 +8,18 @@ MODULE_LICENSE("GPL");\
 MODULE_AUTHOR(author);\
 MODULE_DESCRIPTION(description);\
 MODULE_VERSION(version);
-struct IEE802_3Buffer {
-    unsigned char DestinationMAC[6];
-    unsigned char SourceMAC[6];
-    uint16_t EtherType;
-    unsigned char Payload[];
+struct Standard{
+    struct Standard*Previous,*Next;
+    uint16_t Version;
+    uint16_t Section;
+    char*Data;
 };
 struct Frame{
-    struct Frame*Previous;
+    struct Frame*Previous,*Next;
     struct sk_buff*skb; 
     int id; 
-    struct IEE802_3Buffer*IEE802_3Buffer;
-    struct Frame*Next;
+    char*IEE802_3Buffer;
+    struct Standard*Standards;
 };
 typedef int(*CloseFrameFunction)(struct Frame*frame);
 typedef int(*DropFrameFunction)(struct Frame*frame);
@@ -30,6 +30,9 @@ typedef int(*SendFrameFunction)(struct Frame*frame);
 typedef void(*RebootServerFunction)(void);
 typedef bool(*WaitForMemoryIsAvailableFunction)(unsigned long memoryRequiredBytes);
 typedef void*(*WaitForMemoryFunction)(unsigned long memoryRequiredBytes);
+typedef char* (*GetStandardFunction)(struct Frame*frame,uint16_t version,uint16_t section);
+typedef int (*CloseStandardFunction)(struct Frame*frame,uint16_t version,uint16_t section);
+typedef char* (*CreateStandardFunction)(struct Frame*frame,uint16_t version,uint16_t section);
 typedef void(*PrintFunction)(const char*title,const unsigned char*data,int from,int to);
 struct WeMakeSoftwareFunctions{
     CloseFrameFunction CloseFrame;
@@ -41,5 +44,8 @@ struct WeMakeSoftwareFunctions{
     RebootServerFunction RebootServer;
     WaitForMemoryIsAvailableFunction waitForMemoryIsAvailable;
     WaitForMemoryFunction waitForMemory;
+    GetStandardFunction GetStandard;
+    CloseStandardFunction CloseStandard;
+    CreateStandardFunction CreateStandard;
     PrintFunction Print; 
 };

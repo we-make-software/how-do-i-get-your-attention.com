@@ -1,18 +1,67 @@
 #include"WeMakeSoftware.h"
 #include<linux/if_ether.h>
 #include<linux/reboot.h>
-//Dependencies:IEE802_3Software
+struct WeMakeSoftwareFunctions*WeMakeSoftware;
 static bool IsServerClose=false; 
 static struct Frame*Frames=NULL;
 void*waitForMemory(unsigned long memoryRequiredBytes);
 bool waitForMemoryIsAvailable(unsigned long memoryRequiredBytes);
-void Print(const char *title,const unsigned char*data,int from,int to);
+void Print(const char*title,const unsigned char*data,int from,int to);
 int CloseFrame(struct Frame*frame);
 int DropFrame(struct Frame*frame);
 int DropAndCloseFrame(struct Frame*frame);
 struct Frame*CreateFrame(uint8_t id);
 int SetSizeFrame(struct Frame*frame,uint16_t Size);
 int SendFrame(struct Frame*frame);
+char*GetStandard(struct Frame*frame,uint16_t version,uint16_t section);
+int CloseStandard(struct Frame*frame,uint16_t version,uint16_t section);
+char*CreateStandard(struct Frame*frame,uint16_t version,uint16_t section);
+
+char*GetStandard(struct Frame*frame,uint16_t version,uint16_t section){
+    if(!frame->Standards)return NULL;
+    struct Standard*current=frame->Standards;
+    while (current){
+        if(current->Version==version&&current->Section==section)return current->Data;
+        current=current->Previous;
+    }
+    return NULL;
+}
+int CloseStandard(struct Frame*frame,uint16_t version,uint16_t section){
+    if (!frame||!frame->Standards)return NET_RX_DROP; 
+    struct Standard*current=frame->Standards;
+    while (current)
+    {
+        if (current->Version==version&&current->Section==section){
+            if(current->Previous)current->Previous->Next=current->Next;
+            if(current->Next)current->Next->Previous=current->Previous;
+            if(frame->Standards==current)
+                if(current->Previous)frame->Standards=current->Previous;
+                else frame->Standards=NULL;
+            kfree(current);
+            return NET_RX_SUCCESS; 
+        }
+        current = current->Previous;
+    }
+    return NET_RX_DROP; 
+}
+char*CreateStandard(struct Frame*frame,uint16_t version,uint16_t section){
+    struct Standard*current=frame->Standards;
+    while (current)
+    {
+        if(current->Version==version&&current->Section==section)return NULL; 
+        current=current->Previous;
+    }
+    struct Standard*standard=waitForMemory(sizeof(struct Standard));
+    if(!standard)return NULL;
+    standard->Version=version;
+    standard->Section=section;
+    standard->Next=standard->Previous=NULL;
+    if(frame->Standards){
+        frame->Standards->Next=standard;
+        standard->Previous=frame->Standards;
+    }
+    return(frame->Standards=standard)->Data;
+}
 int CloseFrame(struct Frame*frame) {
     if(!frame) return NET_RX_SUCCESS;
     if (frame->Previous) 
@@ -21,6 +70,13 @@ int CloseFrame(struct Frame*frame) {
         frame->Next->Previous = frame->Previous;
     if (frame==Frames) 
         Frames=frame->Previous?frame->Previous:NULL;
+    struct Standard*current=frame->Standards;
+    while (current)
+    {
+        kfree(current);
+        current = current->Previous;
+    }
+    frame->Standards=NULL;
     kfree(frame);
     return NET_RX_SUCCESS;
 }
@@ -49,7 +105,7 @@ struct Frame*CreateFrame(uint8_t id) {
 int SetSizeFrame(struct Frame*frame,uint16_t Size){
     if(!frame||!(Size>=14&&Size<=1514&&!frame->skb)||!waitForMemoryIsAvailable(Size)||!(frame->skb=alloc_skb(Size,GFP_KERNEL)))return NET_RX_DROP;
     skb_put(frame->skb,Size);
-    frame->IEE802_3Buffer=(struct IEE802_3Buffer*)skb_mac_header(frame->skb);
+    frame->IEE802_3Buffer=skb_mac_header(frame->skb);
     return NET_RX_SUCCESS;
 }
 int SendFrame(struct Frame*frame) {
@@ -61,31 +117,29 @@ int SendFrame(struct Frame*frame) {
     return result>=0?NET_RX_SUCCESS:NET_RX_DROP;
 }
 extern int IEE802_3In(struct Frame*frame);
-static int FrameReader(struct sk_buff*skb, struct net_device*dev, struct packet_type *pt, struct net_device *orig_dev) {
+static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_type*pt,struct net_device*orig_dev){
     struct Frame*frame;
     if (IsServerClose||skb->len<42||dev->name[0]!=101||dev->name[1]!=116||dev->name[2]!=104||!(frame=CreateFrame(dev->ifindex))){
         kfree_skb(skb); 
         return NET_RX_DROP; 
     }
-    frame->IEE802_3Buffer=(struct IEE802_3Buffer*)skb_mac_header((frame->skb=skb)));
+    frame->Standards=NULL;
+    frame->IEE802_3Buffer=skb_mac_header((frame->skb=skb));
     return IEE802_3In(frame);
 }
 #include<linux/slab.h>
 #include<linux/string.h>
-void Print(const char *title, const unsigned char *data, int from, int to) {
-    int index = 0;
-    int buf_size = strlen(title) + 8 * (to - from + 1) + (to - from) + 2;
-    char *buffer = waitForMemory(buf_size);
-    strcpy(buffer, title);
-    index = strlen(title);
-    buffer[index++] = ':';
-    buffer[index++] = ' ';
-    for (int i = from; i <= to; i++) {
-        for (int j = 7; j >= 0; j--) 
-            buffer[index++] = ((data[i] >> j) & 1) ? '1' : '0';
-        buffer[index++] = ' ';
+void Print(const char*title,const unsigned char*data,int from,int to){
+    char*buffer=waitForMemory(strlen(title)+8*(to-from+1)+(to-from)+2);
+    strcpy(buffer,title);
+    int index=strlen(title);
+    buffer[index++]=58;
+    buffer[index++]=32;
+    for(int i=from;i<=to i++){
+        for (int j=7;j>= 0;j--)buffer[index++]=((data[i]>>j)&1)?49:48;
+        buffer[index++]=32;
     }
-    buffer[index - 1] = '\0';
+    buffer[index-1]=0;
     printk(KERN_INFO "%s\n", buffer);
     kfree(buffer);
 }
@@ -119,7 +173,6 @@ void RebootServer(void){
     if(WeMakeSoftware)kfree(WeMakeSoftware);
     if(reboot)kernel_restart(NULL);
 }
-struct WeMakeSoftwareFunctions*WeMakeSoftware;
 extern void IEE802_3Setup(struct WeMakeSoftwareFunctions*weMakeSoftwareFunctions);
 static int __init wms_init(void){
     WeMakeSoftware=waitForMemory(sizeof(struct WeMakeSoftwareFunctions));

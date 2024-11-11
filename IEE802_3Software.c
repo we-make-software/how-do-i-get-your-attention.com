@@ -1,5 +1,5 @@
 #include"IEE802_3Software.h"
-
+struct IEE802_3Functions*IEE802_3;
 int SwapIEE802_3MacAddress(struct Frame*request,struct Frame*response);
 int SwapIEE802_3MacAddress(struct Frame*request,struct Frame*response){
     if (!request||!response)return NET_RX_DROP;
@@ -12,7 +12,6 @@ int SwapIEE802_3MacAddress(struct Frame*request,struct Frame*response){
 extern int RFC791In(struct Frame*frame);
 extern int RFC826In(struct Frame*frame);
 extern int RFC8200In(struct Frame*frame);
-struct IEE802_3Functions*IEE802_3;
 extern int IEE802_3In(struct Frame*frame);
 int IEE802_3In(struct Frame*frame) {
     switch((frame->IEE802_3Buffer->EtherType&65280)>>8|(frame->IEE802_3Buffer->EtherType&255)<<8){
