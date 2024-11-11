@@ -1,12 +1,10 @@
 BRANCH = main
 
-MODULE_NAME1 = WeMakeSoftware
-MODULE_NAME2 = IEE802_3Software
-USER_SERVICE_PATH = /etc/systemd/system/$(MODULE_NAME1).service
-EXECUTABLE_PATH = /root/how-to-get-your-attention.com/User
+ModuleWeMakeSoftware = WeMakeSoftware
+ModuleIEE802_3 = IEE802_3Software
 
-obj-m += $(MODULE_NAME1).o
-obj-m += $(MODULE_NAME2).o
+obj-m += $(ModuleWeMakeSoftware).o
+obj-m += $(ModuleIEE802_3).o
 
 all: build
 
@@ -17,12 +15,12 @@ clean:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
 
 insert: build
-	sudo insmod $(MODULE_NAME2).ko
-	sudo insmod $(MODULE_NAME1).ko
+	sudo insmod $(ModuleIEE802_3).ko
+	sudo insmod $(ModuleWeMakeSoftware).ko reboot=0
 
 remove:
-	sudo rmmod $(MODULE_NAME1)
-	sudo rmmod $(MODULE_NAME2)
+	sudo rmmod $(ModuleWeMakeSoftware)
+	sudo rmmod $(ModuleIEE802_3)
 
 clear: 
 	sudo dmesg -C
@@ -46,3 +44,6 @@ push:
 
 pull:
 	git pull origin $(BRANCH)
+
+reboot:
+	sudo reboot
