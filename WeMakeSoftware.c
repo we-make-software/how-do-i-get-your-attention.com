@@ -47,7 +47,7 @@ struct Frame*CreateFrame(uint8_t id) {
     return Frames=frame;
 }
 int SetSizeFrame(struct Frame*frame,uint16_t Size){
-    if(!frame||!(Size>=14&&Size<=1514&&!frame->skb)||!waitForMemoryIsAvailable(Size)||!(  frame->skb = alloc_skb(Size, GFP_KERNEL))) return NET_RX_DROP;
+    if(!frame||!(Size>=14&&Size<=1514&&!frame->skb)||!waitForMemoryIsAvailable(Size)||!(frame->skb=alloc_skb(Size,GFP_KERNEL)))return NET_RX_DROP;
     skb_put(frame->skb,Size);
     frame->IEE802_3Buffer=(struct IEE802_3Buffer*)skb_mac_header(frame->skb);
     return NET_RX_SUCCESS;

@@ -46,4 +46,4 @@ static void __exit wms_exit(void){
     if(IEE802_3)kfree(IEE802_3);
 }
 module_exit(wms_exit);
-MODULE_INFO_SETUP("Pirasath Luxchumykanthan", "WeMakeSoftware IEE802.3", "1.0");
+MODULE_INFO_SETUP("Pirasath Luxchumykanthan","WeMakeSoftware IEE802.3","1.0");
