@@ -1,32 +1,39 @@
-#include "IEE802_3Software.h"
+#include"IEE802_3Software.h"
 
-int SwapIEE802_3MacAddress(struct Frame* request,struct Frame* response);
-int SwapIEE802_3MacAddress(struct Frame* request,struct Frame* response){
-    if (!request || !response) return NET_RX_DROP;
-    for (int i = 0; i < 6; i++) {
+int SwapIEE802_3MacAddress(struct Frame*request,struct Frame*response);
+int SwapIEE802_3MacAddress(struct Frame*request,struct Frame*response){
+    if (!request||!response)return NET_RX_DROP;
+    for (int i=0;i<6;i++){
         response->IEE802_3Buffer->DestinationMAC[i]=request->IEE802_3Buffer->SourceMAC[i];
         response->IEE802_3Buffer->SourceMAC[i]=request->IEE802_3Buffer->DestinationMAC[i];
     }
     return NET_RX_SUCCESS;
 }
-extern int RFC791In(struct Frame* frame);
-extern int RFC8200In(struct Frame* frame);
+extern int RFC791In(struct Frame*frame);
+extern int RFC826In(struct Frame*frame);
+extern int RFC8200In(struct Frame*frame);
 struct IEE802_3Functions*IEE802_3;
-extern int IEE802_3In(struct Frame* frame);
-int IEE802_3In(struct Frame* frame) {
-    switch ((frame->IEE802_3Buffer->EtherType & 65280) >> 8 | (frame->IEE802_3Buffer->EtherType & 255) << 8) {
-        case 2048: //return RFC791In RFC791Software
-        case 34525://return RFC8200In RFC8200Software
-        default:  return IEE802_3->WeMakeSoftware->CloseFrame(frame);
+extern int IEE802_3In(struct Frame*frame);
+int IEE802_3In(struct Frame*frame) {
+    switch((frame->IEE802_3Buffer->EtherType&65280)>>8|(frame->IEE802_3Buffer->EtherType&255)<<8){
+        case 2048:return RFC791In(frame);
+        case 2054:return RFC826In(frame); 
+        case 34525:return RFC8200In(frame);
+        default: {
+            printk("IEE802_3In: Missing EtherType %u in IEE802_3Software.c\n", (frame->IEE802_3Buffer->EtherType & 65280) >> 8 | (frame->IEE802_3Buffer->EtherType & 255) << 8);
+            return IEE802_3->WeMakeSoftware->CloseFrame(frame);
+        }
     }
 }
 EXPORT_SYMBOL(IEE802_3In);
 extern void RFC791Setup(struct IEE802_3Functions*iEE802_3);
+extern void RFC826Setup(struct IEE802_3Functions*iEE802_3);
 extern void RFC8200Setup(struct IEE802_3Functions*iEE802_3);
 extern void IEE802_3Setup(struct WeMakeSoftwareFunctions*weMakeSoftwareFunctions);
 void IEE802_3Setup(struct WeMakeSoftwareFunctions*weMakeSoftwareFunctions) {
     IEE802_3->WeMakeSoftware=weMakeSoftwareFunctions;
     RFC791Setup(IEE802_3);
+    RFC826Setup(IEE802_3);
     RFC8200Setup(IEE802_3);
 }
 EXPORT_SYMBOL(IEE802_3Setup);
