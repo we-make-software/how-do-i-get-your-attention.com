@@ -165,18 +165,17 @@ bool waitForMemoryIsAvailable(unsigned long memoryRequiredBytes){
 void*waitForMemory(unsigned long memoryRequiredBytes){return waitForMemoryIsAvailable(memoryRequiredBytes)?kmalloc(memoryRequiredBytes,GFP_KERNEL):NULL;}
 void RebootServer(void);
 static struct packet_type Gateway={.type=htons(ETH_P_ALL),.func=FrameReader};
-static bool reboot=true;
-module_param(reboot,bool,0644);
+
 void RebootServer(void){
     IsServerClose=true;
     while(Frames)msleep(100); 
     dev_remove_pack(&Gateway);
     if(WeMakeSoftware)kfree(WeMakeSoftware);
-    if(reboot)kernel_restart(NULL);
+    //kernel_restart(NULL);
 }
 extern void IEE802_3Setup(struct WeMakeSoftwareFunctions*weMakeSoftwareFunctions);
 static int __init wms_init(void){
-    WeMakeSoftware=waitForMemory(sizeof(struct WeMakeSoftwareFunctions));
+  /* WeMakeSoftware=waitForMemory(sizeof(struct WeMakeSoftwareFunctions));
     WeMakeSoftware->CloseFrame=CloseFrame;
     WeMakeSoftware->DropFrame=DropFrame;
     WeMakeSoftware->DropAndCloseFrame=DropAndCloseFrame;
@@ -189,7 +188,7 @@ static int __init wms_init(void){
     WeMakeSoftware->Print=Print;
     IEE802_3Setup(WeMakeSoftware);
     IsServerClose=false;
-    dev_add_pack(&Gateway);   
+    dev_add_pack(&Gateway);   */ 
     return 0;
 }
 module_init(wms_init);

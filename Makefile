@@ -25,7 +25,7 @@ insert: build
 	sudo insmod $(ModuleRFC826).ko
 	sudo insmod $(ModuleRFC791).ko
 	sudo insmod $(ModuleIEE802_3).ko
-	sudo insmod $(ModuleWeMakeSoftware).ko reboot=0
+	sudo insmod $(ModuleWeMakeSoftware).ko
 
 remove:
 	sudo rmmod $(ModuleWeMakeSoftware)

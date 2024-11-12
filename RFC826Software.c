@@ -7,14 +7,10 @@ int RFC826In(struct Frame*frame){
 EXPORT_SYMBOL(RFC826In);
 extern void RFC826Setup(struct IEE802_3Functions*iEE802_3);
 void RFC826Setup(struct IEE802_3Functions*iEE802_3){
+    if(!RFC826)iEE802_3->WeMakeSoftware->waitForMemory(sizeof(struct RFC826Functions));
     RFC826->iEE802_3=iEE802_3;
 }
 EXPORT_SYMBOL(RFC826Setup);
-static int __init wms_init(void) {
-    RFC826=waitForMemory(sizeof(struct RFC826Functions));
-    return 0;
-}
-module_init(wms_init);
 static void __exit wms_exit(void){
     if(RFC826)kfree(RFC826);
 }
