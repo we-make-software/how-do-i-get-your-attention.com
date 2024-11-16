@@ -27,5 +27,5 @@ struct IEEE802 {
 struct IEEE802IANA {
     struct IEEE802IANA*Previous,*Next;
     unsigned char ET[2]; 
-    int (*Reference)(struct Frame* frame, struct IEEE802* ieee802);
+    int (*Reference)(struct Frame*,struct IEEE802*);
 };

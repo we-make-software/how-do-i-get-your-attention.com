@@ -3,6 +3,7 @@
 #include<linux/reboot.h>
 static bool IsServerClose=false; 
 static struct Frame*Frames=NULL;
+static struct IEEE802IANA*IEEE802IANAs=NULL;
 static inline void*waitForMemory(unsigned long memoryRequiredBytes);
 static inline bool waitForMemoryIsAvailable(unsigned long memoryRequiredBytes);
 static inline void Print(const char*title,const unsigned char*data,int from,int to);
@@ -15,7 +16,7 @@ static inline int SendFrame(struct Frame*frame);
 static inline char*GetStandard(struct Frame*frame,uint16_t version,uint16_t section);
 static inline int CloseStandard(struct Frame*frame,uint16_t version,uint16_t section);
 static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t section,char**pointer,int64_t position);
-static struct IEEE802IANA*IEEE802IANAs=NULL;
+
 
 
 static inline int IEEE802A(struct Frame*frame,struct IEEE802*ieee802){
@@ -27,7 +28,7 @@ static inline int IEEE802A(struct Frame*frame,struct IEEE802*ieee802){
         return CloseFrame(frame);
     }
 }
-static inline void IEEE802IANARegister(const unsigned char ET[2], const int (*Reference)(struct Frame* frame, struct IEEE802* ieee802)){
+static inline void IEEE802IANARegister(unsigned char ET[2],int(*Reference)(struct Frame*,struct IEEE802*)){
     struct IEEE802IANA*iEEE802IANA=waitForMemory(sizeof(struct IEEE802IANA));
     if(!iEEE802IANA)return;
     iEEE802IANA->ET[0] = ET[0]; 

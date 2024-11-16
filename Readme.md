@@ -227,14 +227,14 @@ To organize this information, I have created the following structure:
 struct IEEE802IANA {
     struct IEEE802IANA* Previous, * Next;
     unsigned char ET[2];
-    int (*Reference)(struct Frame* frame, struct IEEE802* ieee802);
+    int (*Reference)(struct Frame*,struct IEEE802*);
 };
 ```
 
 I have also defined a function:
 
 ```c
-static inline void IEEE802IANARegister(const unsigned char ET[2], const int (*Reference)(struct Frame* frame, struct IEEE802* ieee802));
+static inline void IEEE802IANARegister(unsigned char ET[2],int(*Reference)(struct Frame*,struct IEEE802*));
 ```
 
 This function only needs to be called in the `wms_init` function.
