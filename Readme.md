@@ -217,10 +217,28 @@ What does this ET number represent? Well, we have a standard.
 
 Here is the link for reference: [IANA IEEE 802 Numbers](https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml).
 
-If you look at the row for EtherType (decimal), you can see that `2048` represents Internet Protocol version 4 (IPv4). Similarly, other numbers follow the same convention. Can you guess what `34525` represents?
+If you look at the row for EtherType (decimal), you will see that `2048` represents Internet Protocol version 4 (IPv4). Similarly, other numbers follow the same convention. Can you guess what `34525` represents?
 
-If you look at the row for `2048`, it has a **Reference**. We are going to talk a lot about these references, so we will split them based on their corresponding EtherType (ET) numbers. 
+For the row corresponding to `2048`, you will notice a **Reference**. We will be discussing these references extensively, splitting them based on their associated EtherType (ET) numbers.
 
-This approach will help us understand what happens in detail. In this documentation, I will provide as much detail as possible and explain each step thoroughly.
+To organize this information, I have created the following structure:
 
-For some documentation that does not have an ET number, I will indicate it with just the RFC number. If it does have an ET number, I will use a title like **ET2048/RFC9542**. The presence of an ET in the title means it comes from the [IANA IEEE 802 Numbers](https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml) link.
+```c
+struct IEEE802IANA {
+    struct IEEE802IANA* Previous, * Next;
+    unsigned char ET[2];
+    int (*Reference)(struct Frame* frame, struct IEEE802* ieee802);
+};
+```
+
+I have also defined a function:
+
+```c
+static inline void IEEE802IANARegister(const unsigned char ET[2], const int (*Reference)(struct Frame* frame, struct IEEE802* ieee802));
+```
+
+This function only needs to be called in the `wms_init` function.
+
+By understanding everything discussed above, we have finished the topic of **IEEE802A**.
+
+

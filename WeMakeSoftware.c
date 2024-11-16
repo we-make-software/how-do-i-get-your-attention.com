@@ -15,18 +15,27 @@ static inline int SendFrame(struct Frame*frame);
 static inline char*GetStandard(struct Frame*frame,uint16_t version,uint16_t section);
 static inline int CloseStandard(struct Frame*frame,uint16_t version,uint16_t section);
 static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t section,char**pointer,int64_t position);
+static struct IEEE802IANA*IEEE802IANAs=NULL;
+
 
 static inline int IEEE802A(struct Frame*frame,struct IEEE802*ieee802){
-    switch ((ieee802->ET[0] << 8) | ieee802->ET[1])
-    {
-    case 2048:
-        
-        break;
-    
-    default:
-        break;
+    struct IEEE802IANA*this;
+    for(this=IEEE802IANAs;this&&!(this->ET[0]==ieee802->ET[0]&&this->ET[1]==ieee802->ET[1]);this=this->Previous);
+    if(this)return this->Reference(frame,ieee802);
+    else {
+        printk(KERN_WARNING "(IEEE802A)Unsupported EtherType: %u\n", (unsigned int)((ieee802->ET[0] << 8) | ieee802->ET[1]));
+        return CloseFrame(frame);
     }
-    return CloseFrame(frame);
+}
+static inline void IEEE802IANARegister(const unsigned char ET[2], const int (*Reference)(struct Frame* frame, struct IEEE802* ieee802)){
+    struct IEEE802IANA*iEEE802IANA=waitForMemory(sizeof(struct IEEE802IANA));
+    if(!iEEE802IANA)return;
+    iEEE802IANA->ET[0] = ET[0]; 
+    iEEE802IANA->ET[1] = ET[1];
+    iEEE802IANA->Reference=Reference;
+    iEEE802IANA->Next=NULL;
+    iEEE802IANA->Previous=IEEE802IANAs;
+    IEEE802IANAs=iEEE802IANA;
 }
 static inline int IEEE802R(struct Frame*frame){
     char*Pointer;
@@ -100,12 +109,9 @@ static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t s
     if(this||!(this=waitForMemory(sizeof(struct Standard))))return false;
     this->Version=version;
     this->Section=section;
-    this->Next=this->Previous=NULL;
+    this->Next=NULL;
     *pointer=this->Data=frame->IEE802Buffer+position;
-    if(frame->Standards){
-        frame->Standards->Next=this;
-        this->Previous=frame->Standards;
-    }
+    if(this->Previous=frame->Standards)frame->Standards->Next=this;
     frame->Standards = this;
     return true;
 }
@@ -136,10 +142,7 @@ static inline struct Frame*CreateFrame(uint8_t id) {
     if(!(frame=waitForMemory(sizeof(struct Frame))))return NULL;
     frame->Next=frame->Previous=NULL;
     frame->id=id;
-    if(Frames){
-        frame->Previous=Frames;
-        Frames->Next=frame;
-    } 
+    if(frame->Previous=Frames)Frames->Next=frame;
     return Frames=frame;
 }
 static inline int SetSizeFrame(struct Frame*frame,uint16_t Size){
@@ -166,6 +169,8 @@ static void __exit wms_exit(void){
     IsServerClose=true;
     while(Frames)msleep(100); 
     dev_remove_pack(&Gateway);
+    for (struct IEEE802IANA* this = IEEE802IANAs; this; this = this->Previous)
+    kfree(this);
 }
 module_exit(wms_exit);
 MODULE_INFO_SETUP("Pirasath Luxchumykanthan","WeMakeSoftware Kernel Network","1.0");
