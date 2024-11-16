@@ -10,8 +10,7 @@ MODULE_DESCRIPTION(description);\
 MODULE_VERSION(version);
 struct Standard{
     struct Standard*Previous,*Next;
-    uint16_t Version;
-    uint16_t Section;
+    uint16_t Version,Section;
     char*Data;
 };
 struct Frame{
@@ -22,5 +21,5 @@ struct Frame{
     struct Standard*Standards;
 };
 struct IEEE802_3 {
-    unsigned char DestinationMAC[6],SourceMAC[6],EtherType[2];
+    unsigned char DMAC[6],SMAC[6],ET[2];
 };

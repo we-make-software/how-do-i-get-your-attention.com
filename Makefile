@@ -14,7 +14,7 @@ insert: build
 	sudo insmod $(ModuleWeMakeSoftware).ko
 
 remove:
-	-sudo rmmod -f $(ModuleWeMakeSoftware) 
+	sudo rmmod $(ModuleWeMakeSoftware)  || echo "Nothing to remove"
 clear: 
 	sudo dmesg -C
 
