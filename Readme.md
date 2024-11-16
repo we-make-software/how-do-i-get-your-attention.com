@@ -171,3 +171,50 @@ For example:
    - The LSB is often toggled in low-level operations to represent state changes, flags, or parity.
 
 # IEEE802_3->ET[2]
+
+ET has 2 bytes, or let’s say 2 chars. A char is essentially a number between 0 and 255.
+
+Imagine a **16-bit number** as a box that is split into two smaller boxes: a **big box** (higher byte) and a **small box** (lower byte). Each of these boxes holds a number between **0 and 255**.
+
+If you want to figure out the value of the big box and the small box together, here’s what you do:
+
+1. Look at the **big box** (higher byte). This box is very important because it’s like the boss it’s bigger and more powerful. To make its value count in the full number, you need to **multiply it by 256**.
+
+2. Look at the **small box** (lower byte). This one is not as powerful, so you just **add its value directly** to the result.
+
+Here’s a step-by-step example:
+
+Big box: `00001000`  
+Small box: `00000000`  
+
+Step 1: Turn the big box (`00001000`) into a regular number.  
+- This is **8** in normal numbers.
+
+Step 2: Multiply the big box by 256.  
+- \( 8 \times 256 = 2048 \)
+
+Step 3: Turn the small box (`00000000`) into a number.  
+- This is **0**.
+
+Step 4: Add the small box to the big box.  
+- \( 2048 + 0 = 2048 \)
+
+So the full number is **2048**.
+
+Here’s another example:
+
+Big box: `00000001`  
+Small box: `11111111`  
+
+Step 1: Big box becomes **1**.  
+Step 2: Multiply big box by 256: \( 1 \times 256 = 256 \).  
+Step 3: Small box becomes **255**.  
+Step 4: Add them together: \( 256 + 255 = 511 \).  
+
+And that’s how you read a 16-bit number using two smaller 8-bit boxes! Does this make more sense? 😊
+
+What does this ET number represent? Well, we have a standard.
+
+Here is the link for reference: [IANA IEEE 802 Numbers](https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml).
+
+If you look at the row for EtherType (decimal), you can see that `2048` represents Internet Protocol version 4 (IPv4). Similarly, other numbers follow the same convention. Can you guess what `34525` represents?

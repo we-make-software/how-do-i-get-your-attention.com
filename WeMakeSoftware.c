@@ -17,6 +17,7 @@ static inline int CloseStandard(struct Frame*frame,uint16_t version,uint16_t sec
 static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t section,char**pointer,int64_t position);
 
 static inline int IEEE802_3A(struct Frame*frame,struct IEEE802_3*ieee802_3){
+    Print("ET",ieee802_3->ET,0,1);
     return CloseFrame(frame);
 }
 static inline int IEEE802_3R(struct Frame*frame){
@@ -102,9 +103,9 @@ static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t s
 }
 static inline int CloseFrame(struct Frame*frame) {
     if(!frame)return 0;
-    if(frame==Frames)Frames=frame->Previous?frame->Previous:NULL;
     if (frame->Previous)frame->Previous->Next=frame->Next;
     if (frame->Next)frame->Next->Previous=frame->Previous;
+    if(frame==Frames)Frames=frame->Previous?frame->Previous:NULL;
     if (frame->Standards)
       for(struct Standard*this=frame->Standards;this;this=this->Previous) 
           kfree(this);
