@@ -16,13 +16,21 @@ static inline char*GetStandard(struct Frame*frame,uint16_t version,uint16_t sect
 static inline int CloseStandard(struct Frame*frame,uint16_t version,uint16_t section);
 static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t section,char**pointer,int64_t position);
 
-static inline int IEEE802_3A(struct Frame*frame,struct IEEE802_3*ieee802_3){
-    Print("ET",ieee802_3->ET,0,1);
+static inline int IEEE802A(struct Frame*frame,struct IEEE802*ieee802){
+    switch ((ieee802->ET[0] << 8) | ieee802->ET[1])
+    {
+    case 2048:
+        
+        break;
+    
+    default:
+        break;
+    }
     return CloseFrame(frame);
 }
-static inline int IEEE802_3R(struct Frame*frame){
+static inline int IEEE802R(struct Frame*frame){
     char*Pointer;
-    return CreateStandard(frame,802,3,&Pointer,0)?IEEE802_3A(frame,(struct IEEE802_3*)Pointer):CloseFrame(frame);
+    return CreateStandard(frame,802,0,&Pointer,0)?IEEE802A(frame,(struct IEEE802*)Pointer):CloseFrame(frame);
 }
 static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_type*pt,struct net_device*orig_dev){
     struct Frame*frame;
@@ -31,8 +39,8 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
         return 1; 
     }
     frame->Standards=NULL;
-    frame->IEE802_3Buffer=skb_mac_header(frame->skb=skb);
-    return IEEE802_3R(frame);
+    frame->IEE802Buffer=skb_mac_header(frame->skb=skb);
+    return IEEE802R(frame);
 }
 #include<linux/slab.h>
 #include<linux/string.h>
@@ -93,7 +101,7 @@ static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t s
     this->Version=version;
     this->Section=section;
     this->Next=this->Previous=NULL;
-    *pointer=this->Data=frame->IEE802_3Buffer+position;
+    *pointer=this->Data=frame->IEE802Buffer+position;
     if(frame->Standards){
         frame->Standards->Next=this;
         this->Previous=frame->Standards;
@@ -137,7 +145,7 @@ static inline struct Frame*CreateFrame(uint8_t id) {
 static inline int SetSizeFrame(struct Frame*frame,uint16_t Size){
     if(!frame||!(Size>=14&&Size<=1514&&!frame->skb)||!waitForMemoryIsAvailable(Size)||!(frame->skb=alloc_skb(Size,GFP_KERNEL)))return NET_RX_DROP;
     skb_put(frame->skb,Size);
-    frame->IEE802_3Buffer=skb_mac_header(frame->skb);
+    frame->IEE802Buffer=skb_mac_header(frame->skb);
     return 0;
 }
 static inline int SendFrame(struct Frame*frame){

@@ -65,12 +65,12 @@ struct Frame {
     struct Frame*Previous,*Next;
     struct sk_buff*skb;
     int id;
-    char*IEE802_3B;
+    char*IEE802Buffer;
     struct Standard*Standards;
 };
 ```
 
-As you can see, the `Frame` structure includes `IEE802_3B` and `id`, which represent the buffer and the network card it originates from, respectively. I have also included `Previous` and `Next` pointers to make this `Frame` structure part of a linked list in memory. This list is managed by the global variable:
+As you can see, the `Frame` structure includes `IEE802Buffer` and `id`, which represent the buffer and the network card it originates from, respectively. I have also included `Previous` and `Next` pointers to make this `Frame` structure part of a linked list in memory. This list is managed by the global variable:
 
 ```c
 static struct Frame*Frames=NULL;
@@ -78,31 +78,31 @@ static struct Frame*Frames=NULL;
 
 This setup allows seamless management of frames, with `static struct Frame*CreateFrame(uint8_t id)` as the function responsible for creating and linking new frames. This function does not have a connection to the `sk_buff*skb`, so I have implemented `SetSizeFrame(struct Frame*frame,uint16_t Size)` to create a new `sk_buff` only if one is not already installed. This means that in the `FrameReader` function, we don’t need to use it immediately.
 
-In `FrameReader`, I set `frame->Standards` to `NULL`, configure `frame->skb`, and then set `frame->IEE802_3Buffer`. In Netfilter, if we return `0`, it indicates success; if we return `1`, we instruct Netfilter to drop the packet. To handle this, I created `static int CloseFrame(struct Frame*frame);`, which does not drop the packet but closes it. Additionally, `static int DropFrame(struct Frame*frame);` drops the packet without closing it. To handle both dropping and closing in one step, I implemented `static int DropAndCloseFrame(struct Frame*frame);`.
+In `FrameReader`, I set `frame->Standards` to `NULL`, configure `frame->skb`, and then set `frame->IEE802Buffer`. In Netfilter, if we return `0`, it indicates success; if we return `1`, we instruct Netfilter to drop the packet. To handle this, I created `static int CloseFrame(struct Frame*frame);`, which does not drop the packet but closes it. Additionally, `static int DropFrame(struct Frame*frame);` drops the packet without closing it. To handle both dropping and closing in one step, I implemented `static int DropAndCloseFrame(struct Frame*frame);`.
 
-Now, you see `Standards` in the `Frame`. What does it mean? It is a simple and efficient way to point to an address within `frame->IEE802_3Buffer`. This design simplifies coding by avoiding heavy logic, enabling faster responses to the caller. The goal is to minimize processing time while maintaining flexibility in handling the data.
+Now, you see `Standards` in the `Frame`. What does it mean? It is a simple and efficient way to point to an address within `frame->IEE802Buffer`. This design simplifies coding by avoiding heavy logic, enabling faster responses to the caller. The goal is to minimize processing time while maintaining flexibility in handling the data.
 
-We can pass the `FrameReader` function's `struct Frame*frame` to `static int IEEE802_3Reader(struct Frame*frame)`. In this section, we simply read the data from the frame and perform the necessary action. 
+We can pass the `FrameReader` function's `struct Frame*frame` to `static int IEEE802Reader(struct Frame*frame)`. In this section, we simply read the data from the frame and perform the necessary action. 
 
-This design keeps the code modular and focused, allowing `FrameReader` to handle incoming frames while delegating the specific task of processing IEEE 802.3 frames to `IEEE802_3Reader`. This approach simplifies the overall logic and enhances readability while maintaining efficiency.
+This design keeps the code modular and focused, allowing `FrameReader` to handle incoming frames while delegating the specific task of processing IEEE 802.3 frames to `IEEE802R`. This approach simplifies the overall logic and enhances readability while maintaining efficiency.
 
 We don't know if the server is busy, but we respect the server's memory. For this reason, I’ve established some ground rules for the kernel. `CreateStandard` returns `false` if the server is busy, couldn't create the standard, or if the standard already exists. This is why it’s important to call it only when needed. Repeated calls would just result in `false`, which makes no sense.
 
-In `IEEE802_3R`, a `char* Pointer` is used to handle the result of `CreateStandard`. The ternary operator is utilized for efficiency: if `CreateStandard` returns `true`, the frame is passed to `IEEE802_3A` to process the IEEE 802.3 data. If it returns `false`, `CloseFrame(frame)` is called to clean up the frame and its associated standards.
+In `IEEE802R`, a `char* Pointer` is used to handle the result of `CreateStandard`. The ternary operator is utilized for efficiency: if `CreateStandard` returns `true`, the frame is passed to `IEEE802A` to process the IEEE 802.3 data. If it returns `false`, `CloseFrame(frame)` is called to clean up the frame and its associated standards.
 
 Here’s the code:
 
 ```c
 static inline int IEEE802_3R(struct Frame* frame) {
     char* Pointer;
-    return CreateStandard(frame,802,3,&Pointer,0)?IEEE802_3A(frame,(struct IEEE802_3*)Pointer):CloseFrame(frame);
+    return CreateStandard(frame,802,0,&Pointer,0)?IEEE802A(frame,(struct IEEE802_3*)Pointer):CloseFrame(frame);
 }
 ```
 
-We will discuss `IEEE802_3A` later; first, let’s focus on the structure:
+We will discuss `IEEE802A` later; first, let’s focus on the structure:
 
 ```c
-struct IEEE802_3 {
+struct IEEE802 {
     unsigned char DMAC[6],SMAC[6],ET[2];
 };
 ```
@@ -218,3 +218,9 @@ What does this ET number represent? Well, we have a standard.
 Here is the link for reference: [IANA IEEE 802 Numbers](https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml).
 
 If you look at the row for EtherType (decimal), you can see that `2048` represents Internet Protocol version 4 (IPv4). Similarly, other numbers follow the same convention. Can you guess what `34525` represents?
+
+If you look at the row for `2048`, it has a **Reference**. We are going to talk a lot about these references, so we will split them based on their corresponding EtherType (ET) numbers. 
+
+This approach will help us understand what happens in detail. In this documentation, I will provide as much detail as possible and explain each step thoroughly.
+
+For some documentation that does not have an ET number, I will indicate it with just the RFC number. If it does have an ET number, I will use a title like **ET2048/RFC9542**. The presence of an ET in the title means it comes from the [IANA IEEE 802 Numbers](https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml) link.

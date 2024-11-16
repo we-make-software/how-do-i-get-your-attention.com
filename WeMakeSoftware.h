@@ -17,9 +17,9 @@ struct Frame{
     struct Frame*Previous,*Next;
     struct sk_buff*skb; 
     int id; 
-    char*IEE802_3Buffer;
+    char*IEE802Buffer;
     struct Standard*Standards;
 };
-struct IEEE802_3 {
+struct IEEE802 {
     unsigned char DMAC[6],SMAC[6],ET[2];
 };
