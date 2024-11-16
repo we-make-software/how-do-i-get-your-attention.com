@@ -93,7 +93,7 @@ In `IEEE802R`, a `char* Pointer` is used to handle the result of `CreateStandard
 Here’s the code:
 
 ```c
-static inline int IEEE802_3R(struct Frame* frame) {
+static inline int IEEE802R(struct Frame* frame) {
     char* Pointer;
     return CreateStandard(frame,802,0,&Pointer,0)?IEEE802A(frame,(struct IEEE802_3*)Pointer):CloseFrame(frame);
 }
@@ -170,7 +170,7 @@ For example:
 3. **Bitmasking**:
    - The LSB is often toggled in low-level operations to represent state changes, flags, or parity.
 
-# IEEE802_3->ET[2]
+# IEEE802->ET[2]
 
 ET has 2 bytes, or let’s say 2 chars. A char is essentially a number between 0 and 255.
 
