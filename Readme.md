@@ -88,7 +88,7 @@ This design keeps the code modular and focused, allowing `FrameReader` to handle
 
 We don't know if the server is busy, but we respect the server's memory. For this reason, I’ve established some ground rules for the kernel. `CreateStandard` returns `false` if the server is busy, couldn't create the standard, or if the standard already exists. This is why it’s important to call it only when needed. Repeated calls would just result in `false`, which makes no sense.
 
-In `IEEE802R`, a `char* Pointer` is used to handle the result of `CreateStandard`. The ternary operator is utilized for efficiency: if `CreateStandard` returns `true`, the frame is passed to `IEEE802A` to process the IEEE 802.3 data. If it returns `false`, `CloseFrame(frame)` is called to clean up the frame and its associated standards.
+In `IEEE802R`, a `char* Pointer` is used to handle the result of `CreateStandard`. The ternary operator is utilized for efficiency: if `CreateStandard` returns `true`, the frame is passed to `IEEE802A` to process the IEEE 802 data. If it returns `false`, `CloseFrame(frame)` is called to clean up the frame and its associated standards.
 
 Here’s the code:
 
