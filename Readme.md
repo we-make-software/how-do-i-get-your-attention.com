@@ -159,7 +159,6 @@ For example:
 | `11111111`         | `1`                            | `1`                              | 255               |
 | `10101010`         | `1`                            | `0`                              | 170               |
 
----
 
 #### **Real-World Applications**
 1. **Signed Numbers**:
