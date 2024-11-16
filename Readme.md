@@ -40,7 +40,7 @@ __________
 
 # This is what we see:
 
-When data enters our network card, it follows the IEEE 802.3 standard, a foundational protocol in networking. Packets come in various types, identified by an Ethertype, which is critical for firewalls worldwide to manage and control network traffic.
+When data enters our network card, it follows the IEEE 802 standard, a foundational protocol in networking. Packets come in various types, identified by an Ethertype, which is critical for firewalls worldwide to manage and control network traffic.
 
 We only accept data larger than 42 bytes.
 
