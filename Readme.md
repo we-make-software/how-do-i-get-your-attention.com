@@ -95,9 +95,7 @@ Here’s the code:
 ```c
 static inline int IEEE802_3R(struct Frame* frame) {
     char* Pointer;
-    return CreateStandard(frame, 802, 3, &Pointer, 0) 
-        ? IEEE802_3A(frame, (struct IEEE802_3*) Pointer) 
-        : CloseFrame(frame);
+    return CreateStandard(frame,802,3,&Pointer,0)?IEEE802_3A(frame,(struct IEEE802_3*)Pointer):CloseFrame(frame);
 }
 ```
 
@@ -105,13 +103,14 @@ We will discuss `IEEE802_3A` later; first, let’s focus on the structure:
 
 ```c
 struct IEEE802_3 {
-    unsigned char DMAC[6], SMAC[6], ET[2];
+    unsigned char DMAC[6],SMAC[6],ET[2];
 };
 ```
 
 Here:
 - **DMAC** refers to the Destination Media Access Control address.
 - **SMAC** refers to the Source Media Access Control address.
+- **ET** refers to EtherType.
 
 When processing the frame, the DMAC indicates the destination, and the SMAC represents the source from where the frame originated.
 
@@ -171,3 +170,4 @@ For example:
 3. **Bitmasking**:
    - The LSB is often toggled in low-level operations to represent state changes, flags, or parity.
 
+# IEEE802_3->ET[2]

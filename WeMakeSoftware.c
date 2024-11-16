@@ -27,7 +27,7 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
     struct Frame*frame;
     if (IsServerClose||skb->len<42||dev->name[0]!=101||dev->name[1]!=116||dev->name[2]!=104||!(frame=CreateFrame(dev->ifindex))){
         kfree_skb(skb); 
-        return NET_RX_DROP; 
+        return 1; 
     }
     frame->Standards=NULL;
     frame->IEE802_3Buffer=skb_mac_header(frame->skb=skb);
@@ -101,17 +101,15 @@ static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t s
     return true;
 }
 static inline int CloseFrame(struct Frame*frame) {
-    if(!frame)return NET_RX_SUCCESS;
+    if(!frame)return 0;
     if(frame==Frames)Frames=frame->Previous?frame->Previous:NULL;
-    else{
-        if (frame->Previous)frame->Previous->Next=frame->Next;
-        if (frame->Next)frame->Next->Previous=frame->Previous;
-    }
+    if (frame->Previous)frame->Previous->Next=frame->Next;
+    if (frame->Next)frame->Next->Previous=frame->Previous;
     if (frame->Standards)
       for(struct Standard*this=frame->Standards;this;this=this->Previous) 
           kfree(this);
     kfree(frame);
-    return NET_RX_SUCCESS;
+    return 0;
 }
 static inline int DropFrame(struct Frame*frame){
     if(frame)kfree(frame->skb);
@@ -139,16 +137,15 @@ static inline int SetSizeFrame(struct Frame*frame,uint16_t Size){
     if(!frame||!(Size>=14&&Size<=1514&&!frame->skb)||!waitForMemoryIsAvailable(Size)||!(frame->skb=alloc_skb(Size,GFP_KERNEL)))return NET_RX_DROP;
     skb_put(frame->skb,Size);
     frame->IEE802_3Buffer=skb_mac_header(frame->skb);
-    return NET_RX_SUCCESS;
+    return 0;
 }
-
 static inline int SendFrame(struct Frame*frame){
     struct net_device*dev;
     if(!frame||!(dev=dev_get_by_index(&init_net,frame->id)))return NET_RX_DROP;
     frame->skb->dev=dev;
     int result=dev_queue_xmit(frame->skb);
     dev_put(dev);
-    return result>=0?NET_RX_SUCCESS:NET_RX_DROP;
+    return result>=0;
 }
 static int __init wms_init(void){
     IsServerClose=false;
