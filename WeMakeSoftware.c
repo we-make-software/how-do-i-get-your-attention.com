@@ -16,12 +16,12 @@ static inline char*GetStandard(struct Frame*frame,uint16_t version,uint16_t sect
 static inline int CloseStandard(struct Frame*frame,uint16_t version,uint16_t section);
 static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t section,char**pointer,int64_t position);
 
-static inline int IEEE802_3Action(struct Frame*frame,struct IEEE802_3*ieee802_3){
+static inline int IEEE802_3A(struct Frame*frame,struct IEEE802_3*ieee802_3){
     return CloseFrame(frame);
 }
-static inline int IEEE802_3Reader(struct Frame*frame){
+static inline int IEEE802_3R(struct Frame*frame){
     char*Pointer;
-    return CreateStandard(frame,802,3,&Pointer,0)?IEEE802_3Action(frame,(struct IEEE802_3*)Pointer):CloseFrame(frame);
+    return CreateStandard(frame,802,3,&Pointer,0)?IEEE802_3A(frame,(struct IEEE802_3*)Pointer):CloseFrame(frame);
 }
 static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_type*pt,struct net_device*orig_dev){
     struct Frame*frame;
@@ -31,7 +31,7 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
     }
     frame->Standards=NULL;
     frame->IEE802_3Buffer=skb_mac_header(frame->skb=skb);
-    return IEEE802_3Reader(frame);
+    return IEEE802_3R(frame);
 }
 #include<linux/slab.h>
 #include<linux/string.h>
