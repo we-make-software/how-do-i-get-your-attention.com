@@ -3,7 +3,7 @@
 #include<linux/reboot.h>
 static bool IsServerClose=false; 
 static struct Frame*Frames=NULL;
-static struct IEEE802IANA*IEEE802IANAs=NULL;
+
 static inline void*waitForMemory(unsigned long memoryRequiredBytes);
 static inline bool waitForMemoryIsAvailable(unsigned long memoryRequiredBytes);
 static inline void Print(const char*title,const unsigned char*data,int from,int to);
@@ -17,27 +17,35 @@ static inline char*GetStandard(struct Frame*frame,uint16_t version,uint16_t sect
 static inline int CloseStandard(struct Frame*frame,uint16_t version,uint16_t section);
 static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t section,char**pointer,int64_t position);
 
-
+static int RFC9542R(struct Frame*frame, struct IEEE802*ieee802) {
+    // Implementation of the function
+    return 0;
+}
 
 static inline int IEEE802A(struct Frame*frame,struct IEEE802*ieee802){
+    switch (expression)
+    {
+    case 2054:    
+    case 2048:
+    case 34525:
+        break;
+    case 34887:
+    case 34888:
+        break;
+    case 35151:
+        break;    
+    default:return CloseFrame(frame);
+    }
+
     struct IEEE802IANA*this;
     for(this=IEEE802IANAs;this&&!(this->ET[0]==ieee802->ET[0]&&this->ET[1]==ieee802->ET[1]);this=this->Previous);
     if(this)return this->Reference(frame,ieee802);
     else {
-        printk(KERN_WARNING "(IEEE802A)Unsupported EtherType: %u\n", (unsigned int)((ieee802->ET[0] << 8) | ieee802->ET[1]));
+        Print("(IEEE802A)Unsupported EtherType",ieee802->ET,0,1);
         return CloseFrame(frame);
     }
 }
-static inline void IEEE802IANARegister(unsigned char ET[2],int(*Reference)(struct Frame*,struct IEEE802*)){
-    struct IEEE802IANA*iEEE802IANA=waitForMemory(sizeof(struct IEEE802IANA));
-    if(!iEEE802IANA)return;
-    iEEE802IANA->ET[0] = ET[0]; 
-    iEEE802IANA->ET[1] = ET[1];
-    iEEE802IANA->Reference=Reference;
-    iEEE802IANA->Next=NULL;
-    iEEE802IANA->Previous=IEEE802IANAs;
-    IEEE802IANAs=iEEE802IANA;
-}
+
 static inline int IEEE802R(struct Frame*frame){
     char*Pointer;
     return CreateStandard(frame,802,0,&Pointer,0)?IEEE802A(frame,(struct IEEE802*)Pointer):CloseFrame(frame);
@@ -162,6 +170,8 @@ static inline int SendFrame(struct Frame*frame){
 }
 static int __init wms_init(void){
     IsServerClose=false;
+    IEEE802IANARegister((unsigned char[2]){8, 0}, RFC9542R);
+    IEEE802IANARegister((unsigned char[2]){134, 221}, RFC9542R);
     dev_add_pack(&Gateway);   
     return 0;
 }
