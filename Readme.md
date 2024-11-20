@@ -232,3 +232,8 @@ Any other EtherType will result in closing the frame.
 
 This ensures the function handles only the protocols relevant to our application. 
 
+**RFC 9542** defines the rules for IPv6 **Neighbor Discovery Protocol (NDP)**. It describes how devices in an IPv6 network find each other, resolve IP addresses to MAC addresses, detect unreachable devices, and discover routers and network prefixes for configuration.
+
+**RFC 5332** specifies how **MPLS (Multi-Protocol Label Switching)** labels are used to carry IPv4 and IPv6 packets. It describes the encapsulation of these packets with MPLS headers to enable efficient routing and forwarding in large-scale networks.
+
+**RFC 8300** defines **Generic UDP Encapsulation (GUE)**, a protocol for encapsulating different types of payloads (e.g., IPv4, IPv6) over UDP. It supports features like extensibility and optional security with minimal overhead.
