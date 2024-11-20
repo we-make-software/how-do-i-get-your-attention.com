@@ -17,32 +17,26 @@ static inline char*GetStandard(struct Frame*frame,uint16_t version,uint16_t sect
 static inline int CloseStandard(struct Frame*frame,uint16_t version,uint16_t section);
 static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t section,char**pointer,int64_t position);
 
-static int RFC9542R(struct Frame*frame, struct IEEE802*ieee802) {
+static inline int RFC5332R(struct Frame*frame, struct IEEE802*ieee802) {
+    // Implementation of the function
+    return 0;
+}
+static inline int RFC9542R(struct Frame*frame, struct IEEE802*ieee802) {
     // Implementation of the function
     return 0;
 }
 
+static inline int RFC8300R(struct Frame*frame, struct IEEE802*ieee802) {
+    // Implementation of the function
+    return 0;
+}
 static inline int IEEE802A(struct Frame*frame,struct IEEE802*ieee802){
-    switch (expression)
+    switch ((ieee802->ET[0]<<8)|ieee802->ET[1]) 
     {
-    case 2054:    
-    case 2048:
-    case 34525:
-        break;
-    case 34887:
-    case 34888:
-        break;
-    case 35151:
-        break;    
-    default:return CloseFrame(frame);
-    }
-
-    struct IEEE802IANA*this;
-    for(this=IEEE802IANAs;this&&!(this->ET[0]==ieee802->ET[0]&&this->ET[1]==ieee802->ET[1]);this=this->Previous);
-    if(this)return this->Reference(frame,ieee802);
-    else {
-        Print("(IEEE802A)Unsupported EtherType",ieee802->ET,0,1);
-        return CloseFrame(frame);
+        case 2048:case 2054:case 34525:return RFC9542R(frame,ieee802);
+        case 34887:case 34888:return RFC5332R(frame,ieee802);
+        case 35151:return RFC8300R(frame,ieee802); 
+        default:return CloseFrame(frame);
     }
 }
 
