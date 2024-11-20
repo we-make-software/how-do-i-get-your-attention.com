@@ -237,3 +237,19 @@ This ensures the function handles only the protocols relevant to our application
 **RFC 5332** specifies how **MPLS (Multi-Protocol Label Switching)** labels are used to carry IPv4 and IPv6 packets. It describes the encapsulation of these packets with MPLS headers to enable efficient routing and forwarding in large-scale networks.
 
 **RFC 8300** defines **Generic UDP Encapsulation (GUE)**, a protocol for encapsulating different types of payloads (e.g., IPv4, IPv6) over UDP. It supports features like extensibility and optional security with minimal overhead.
+
+**RFC 9542 (IPv6 Neighbor Discovery Protocol - NDP)** directly uses MAC addresses as part of its functionality. MAC addresses are included in Neighbor Solicitation and Neighbor Advertisement messages to resolve IPv6 addresses to MAC addresses, ensuring communication at Layer 2.
+
+**RFC 5332 (MPLS)** relies on MAC addresses for the transport of Ethernet frames carrying MPLS-labeled packets. However, MPLS itself does not interact with MAC addresses; it uses labels for forwarding decisions.
+
+**RFC 8300 (Generic UDP Encapsulation - GUE)** includes MAC addresses in the Ethernet frame that carries the UDP-encapsulated packet. GUE operates at Layer 4, so it does not directly use MAC addresses, which are only required for delivery at Layer 2.
+
+---
+
+| **Aspect**                  | **RFC 9542 (NDP)**             | **RFC 5332 (MPLS)**              | **RFC 8300 (GUE)**               |
+|-----------------------------|--------------------------------|----------------------------------|----------------------------------|
+| **Role of MAC Address**      | Central and part of the payload | Required for Layer 2 delivery    | Required for Layer 2 delivery    |
+| **Layer**                   | Layer 2 & Layer 3 (Data Link + Network) | Layer 2.5 (Between Data Link & Network) | Layer 4 (Transport over UDP)     |
+| **Active Use of MAC Address** | Yes (for IP-to-MAC resolution) | No (used only by Ethernet frame) | No (used only by Ethernet frame) |
+| **EtherType Involvement**    | Not specific to NDP            | 34887, 34888 indicate MPLS       | Not specific to GUE              |
+
