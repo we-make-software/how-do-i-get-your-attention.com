@@ -169,10 +169,6 @@ For example:
 
 # IEEE802->ET[2]
 
-Here’s a corrected and refined version of your text:
-
----
-
 **Understanding ET (EtherType) as a 16-bit Number**
 
 ET (EtherType) is a **16-bit number** made up of two 8-bit values (or **bytes**): the **higher byte** and the **lower byte**. Each byte represents a value between **0 and 255**.
