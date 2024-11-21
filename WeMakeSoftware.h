@@ -20,7 +20,14 @@ struct Frame{
     char*IEE802Buffer;
     struct Standard*Standards;
 };
+enum Classification {
+    ADMINISTRATIVELY_ASSIGNED = 0,
+    EXTENDED_LOCAL = 4,
+    RESERVED = 8,
+    STANDARD_ASSIGNED = 12
+};
 struct IEEE802 {
     unsigned char DMAC[6],SMAC[6],ET[2];
     struct Frame*Frame;
+    enum Classification DMACClassification,SMACClassification;
 };

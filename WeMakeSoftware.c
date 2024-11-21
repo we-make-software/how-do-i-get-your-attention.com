@@ -3,7 +3,6 @@
 #include<linux/reboot.h>
 static bool IsServerClose=false; 
 static struct Frame*Frames=NULL;
-
 static inline void*waitForMemory(unsigned long memoryRequiredBytes);
 static inline bool waitForMemoryIsAvailable(unsigned long memoryRequiredBytes);
 static inline void Print(const char*title,const unsigned char*data,int from,int to);
@@ -17,12 +16,23 @@ static inline char*GetStandard(struct Frame*frame,uint16_t version,uint16_t sect
 static inline int CloseStandard(struct Frame*frame,uint16_t version,uint16_t section);
 static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t section,char**pointer,int64_t position);
 
-
+static inline bool WeMakeSoftwareStep(struct IEEE802* ieee802) {
+    Print("ieee802",ieee802->DMAC,0,1);
+    if (ieee802->DMAC[0] & 12) {
+        // This will automatically be true if the packet is "Reserved."
+        // Since the packet's contents are unknown, we just close it.
+        // Returning true effectively closes the packet.
+        return true;
+    }
+    // This area corresponds to "Administratively Assigned."
+    // Please refer to the source code, which is open source and publicly available when needed.
+    return true;
+}
 static inline int IEEE802A(struct Frame*frame,struct IEEE802*ieee802){
-    if(ieee802->SMAC[0]&1||ieee802->DMAC[0]&1||ieee802->DMAC[0]&2||ieee802->SMAC[0]&2) return CloseFrame(frame);
-        
-   
-    return CloseFrame(frame);
+      Print("ieee802",ieee802->DMAC,0,1);
+    if(ieee802->SMAC[0]&1||ieee802->DMAC[0]&1||ieee802->DMAC[0]&2||ieee802->SMAC[0]&2)return CloseFrame(frame);
+    ieee802->Frame=frame;
+    return CloseFrame(frame)?
 }
 
 static inline int IEEE802R(struct Frame*frame){

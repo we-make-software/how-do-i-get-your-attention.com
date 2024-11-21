@@ -220,14 +220,12 @@ Using this logic, I close frames where either the source or destination MAC addr
 
 Not every server with a static IP address supports multicast.
 ```c
-if(ieee802->SMAC[0]&1||ieee802->DMAC[0]&1||ieee802->DMAC[0]&2||ieee802->SMAC[0]&2) return CloseFrame(frame);
+static inline int IEEE802A(struct Frame*frame,struct IEEE802*ieee802){
+    if(ieee802->SMAC[0]&1||ieee802->DMAC[0]&1||ieee802->DMAC[0]&2||ieee802->SMAC[0]&2)return CloseFrame(frame);
+    ieee802->Frame=frame;
+    return WeMakeSoftwareStep(ieee802)?CloseFrame(frame):DropAndCloseFrame(ieee802);
+}
 ```
-
-# Incoming -> IEEE802->DMAC[0] & 12
-
-// We are receiving 2 types of data: "Administratively Assigned" or "Reserved".
-
-But i belive 
 
 
 # IEEE802->ET[2]
@@ -278,3 +276,25 @@ For example:
 These references are critical for identifying the protocol associated with each EtherType.
 
 
+WeMakeSoftwareStep -> IEEE802->DMAC[0] & 12
+// We are receiving two types of data: "Administratively Assigned" or "Reserved."
+
+I believe it’s important to note that no other types of data are being received. Based on this, I will return true here to drop the packet.
+
+
+```c
+static inline bool WeMakeSoftwareStep(struct IEEE802* ieee802) {
+    if (ieee802->DMAC[0] & 12) {
+        // This will automatically be true if the packet is "Reserved."
+        // Since the packet's contents are unknown, we just close it.
+        // Returning true effectively closes the packet.
+        return true;
+    }
+
+    // This area corresponds to "Administratively Assigned."
+    // Please refer to the source code, which is open source and publicly available when needed.
+    return true;
+}
+```
+
+For more information, visit [We-Make-Software](https://www.we-make-software.com).
