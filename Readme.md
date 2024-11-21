@@ -167,6 +167,18 @@ For example:
 3. **Bitmasking**:
    - The LSB is often toggled in low-level operations to represent state changes, flags, or parity.
 
+
+# IEEE802->DMAC[0] & IEEE802->SMAC[0]
+
+A lot of packets are sent by the server itself, and instead of blocking them, I choose to simply use `CloseFrame`. I handle this by examining both the destination and source MAC addresses. 
+
+- **Unicast vs. Multicast**: If the least significant bit (LSB) of the destination MAC address is set to 1, it indicates a multicast address, used to send data to a group of devices. If the LSB is 0, it indicates a unicast address, used for one-to-one communication between two devices.
+
+- **Local vs. Global**: If the second least significant bit (LSB) of either MAC address is set to 1, the address is locally administered, meaning it was manually assigned and is not globally unique. If the bit is 0, the address is globally unique and assigned by IEEE.
+
+Using this logic, I close frames where either the source or destination MAC address is locally administered or when the destination MAC address is multicast.
+
+
 # IEEE802->ET[2]
 
 **Understanding ET (EtherType) as a 16-bit Number**
@@ -204,8 +216,6 @@ Step 2: Add the lower byte:
 
 The full 16-bit value is **511**.
 
-
-
 **What Does the ET Number Represent?**
 
 EtherType numbers are standardized, and each value represents a specific protocol. You can find a comprehensive list in the [IANA IEEE 802 Numbers Registry](https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml). 
@@ -216,4 +226,4 @@ For example:
 
 These references are critical for identifying the protocol associated with each EtherType.
 
-A lot of packets are sent by the server itself, and instead of blocking them, I choose to simply use `CloseFrame`. I do this by checking both the destination and source MAC addresses: if the second least significant bit (LSB) is 1, then the MAC address is locally administered.
+
