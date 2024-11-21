@@ -22,4 +22,5 @@ struct Frame{
 };
 struct IEEE802 {
     unsigned char DMAC[6],SMAC[6],ET[2];
+    struct Frame*Frame;
 };

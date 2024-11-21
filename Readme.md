@@ -168,15 +168,66 @@ For example:
    - The LSB is often toggled in low-level operations to represent state changes, flags, or parity.
 
 
-# IEEE802->DMAC[0] & IEEE802->SMAC[0]
+# IEEE802->DMAC[0] & IEEE802->SMAC[0] 
+
+**Normal every time when we read a byte its LSB. I have previously explained LSB.  
+But what does this `&1` and `&2` do? Okay, let me make a table for you.**
+
+| Operation   | Bit Mask | Bit(s) Affected | Description |
+|-------------|----------|------------------|-------------|
+| `&1`        | `00000001` | **Bit 0 (LSB)**   | Checks if bit 0 is 1. If true, returns 1; otherwise, 0. |
+| `&2`        | `00000010` | **Bit 1 (LSB)**   | Checks if bit 1 is 1. If true, returns 2; otherwise, 0. |
+| `&4`        | `00000100` | **Bit 2 (LSB)**   | Checks if bit 2 is 1. If true, returns 4; otherwise, 0. |
+| `&8`        | `00001000` | **Bit 3 (LSB)**   | Checks if bit 3 is 1. If true, returns 8; otherwise, 0. |
+| `&16`       | `00010000` | **Bit 4 (LSB)**   | Checks if bit 4 is 1. If true, returns 16; otherwise, 0. |
+| `&32`       | `00100000` | **Bit 5 (LSB)**   | Checks if bit 5 is 1. If true, returns 32; otherwise, 0. |
+| `&64`       | `01000000` | **Bit 6 (LSB)**   | Checks if bit 6 is 1. If true, returns 64; otherwise, 0. |
+| `&128`      | `10000000` | **Bit 7 (LSB)**   | Checks if bit 7 is 1. If true, returns 128; otherwise, 0. |
+
+This method checks if each bit (0 through 7) is set (1) or not set (0) in the given byte.
 
 A lot of packets are sent by the server itself, and instead of blocking them, I choose to simply use `CloseFrame`. I handle this by examining both the destination and source MAC addresses. 
 
-- **Unicast vs. Multicast**: If the least significant bit (LSB) of the destination MAC address is set to 1, it indicates a multicast address, used to send data to a group of devices. If the LSB is 0, it indicates a unicast address, used for one-to-one communication between two devices.
+- IEEE802->DMAC[0]&1 & IEEE802->SMAC[0]&1  **Unicast vs. Multicast**: If the least significant bit (LSB) of the destination MAC address is set to 1, it indicates a multicast address, used to send data to a group of devices. If the LSB is 0, it indicates a unicast address, used for one-to-one communication between two devices.
 
-- **Local vs. Global**: If the second least significant bit (LSB) of either MAC address is set to 1, the address is locally administered, meaning it was manually assigned and is not globally unique. If the bit is 0, the address is globally unique and assigned by IEEE.
+- IEEE802->DMAC[0]&2 & IEEE802->SMAC[0]&2 **Local vs. Global**: If the second least significant bit (LSB) of either MAC address is set to 1, the address is locally administered, meaning it was manually assigned and is not globally unique. If the bit is 0, the address is globally unique and assigned by IEEE.
+
+Now it's time to read bits 2 and 3. If we imagine 0000 1100, how do we calculate the number from LSB?
+
+| **Bit Position** | **Binary** | **Bit Weight (Decimal)** | **Calculation** | **Result** |
+|------------------|------------|--------------------------|-----------------|------------|
+| 7 (MSB)          | 0          | 128                      | 0 × 128         | 0          |
+| 6                | 0          | 64                       | 0 × 64          | 0          |
+| 5                | 0          | 32                       | 0 × 32          | 0          |
+| 4                | 0          | 16                       | 0 × 16          | 0          |
+| 3                | 1          | 8                        | 1 × 8           | 8          |
+| 2                | 1          | 4                        | 1 × 4           | 4          |
+| 1                | 0          | 2                        | 0 × 2           | 0          |
+| 0 (LSB)          | 0          | 1                        | 0 × 1           | 0          |
+| **Total**        |            |                          |                 | **12**     |
+
+
+We can use the value `12` by performing operations like `IEEE802->DMAC[0]&12` and `IEEE802->SMAC[0]&12`. This allows us to focus on the specific area that determines whether it is:
+
+| **Value** | **Binary**   | **Description**              |
+|-----------|--------------|------------------------------|
+| 0         | 0000 0000    | Administratively Assigned    |
+| 4         | 0000 0100    | Extended Local               |
+| 8         | 0000 1000    | Reserved                     |
+| 12        | 0000 1100    | Standard Assigned            |
 
 Using this logic, I close frames where either the source or destination MAC address is locally administered or when the destination MAC address is multicast.
+
+Not every server with a static IP address supports multicast.
+```c
+if(ieee802->SMAC[0]&1||ieee802->DMAC[0]&1||ieee802->DMAC[0]&2||ieee802->SMAC[0]&2) return CloseFrame(frame);
+```
+
+# Incoming -> IEEE802->DMAC[0] & 12
+
+// We are receiving 2 types of data: "Administratively Assigned" or "Reserved".
+
+But i belive 
 
 
 # IEEE802->ET[2]
