@@ -17,27 +17,22 @@ static inline char*GetStandard(struct Frame*frame,uint16_t version,uint16_t sect
 static inline int CloseStandard(struct Frame*frame,uint16_t version,uint16_t section);
 static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t section,char**pointer,int64_t position);
 
-static inline int RFC5332R(struct Frame*frame, struct IEEE802*ieee802) {
-    // Implementation of the function
-    return 0;
-}
-static inline int RFC9542R(struct Frame*frame, struct IEEE802*ieee802) {
-    // Implementation of the function
-    return 0;
-}
 
-static inline int RFC8300R(struct Frame*frame, struct IEEE802*ieee802) {
-    // Implementation of the function
-    return 0;
-}
 static inline int IEEE802A(struct Frame*frame,struct IEEE802*ieee802){
-    switch ((ieee802->ET[0]<<8)|ieee802->ET[1]) 
+if (ieee802->SMAC[0] & 2) return CloseFrame(frame); // Close locally administered MACs
+
+    Print("DMAC",ieee802->DMAC,0,5);
+    Print("SMAC",ieee802->SMAC,0,5);
+    
+    /* switch ((ieee802->ET[0]<<8)|ieee802->ET[1]) 
     {
         case 2048:case 2054:case 34525:return RFC9542R(frame,ieee802);
         case 34887:case 34888:return RFC5332R(frame,ieee802);
         case 35151:return RFC8300R(frame,ieee802); 
         default:return CloseFrame(frame);
     }
+    */
+    return CloseFrame(frame);
 }
 
 static inline int IEEE802R(struct Frame*frame){
@@ -114,7 +109,7 @@ static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t s
     this->Section=section;
     this->Next=NULL;
     *pointer=this->Data=frame->IEE802Buffer+position;
-    if(this->Previous=frame->Standards)frame->Standards->Next=this;
+    if((this->Previous=frame->Standards))frame->Standards->Next=this;
     frame->Standards = this;
     return true;
 }
@@ -145,7 +140,7 @@ static inline struct Frame*CreateFrame(uint8_t id) {
     if(!(frame=waitForMemory(sizeof(struct Frame))))return NULL;
     frame->Next=frame->Previous=NULL;
     frame->id=id;
-    if(frame->Previous=Frames)Frames->Next=frame;
+    if((frame->Previous=Frames))Frames->Next=frame;
     return Frames=frame;
 }
 static inline int SetSizeFrame(struct Frame*frame,uint16_t Size){
@@ -164,8 +159,6 @@ static inline int SendFrame(struct Frame*frame){
 }
 static int __init wms_init(void){
     IsServerClose=false;
-    IEEE802IANARegister((unsigned char[2]){8, 0}, RFC9542R);
-    IEEE802IANARegister((unsigned char[2]){134, 221}, RFC9542R);
     dev_add_pack(&Gateway);   
     return 0;
 }
@@ -174,8 +167,6 @@ static void __exit wms_exit(void){
     IsServerClose=true;
     while(Frames)msleep(100); 
     dev_remove_pack(&Gateway);
-    for (struct IEEE802IANA* this = IEEE802IANAs; this; this = this->Previous)
-    kfree(this);
 }
 module_exit(wms_exit);
 MODULE_INFO_SETUP("Pirasath Luxchumykanthan","WeMakeSoftware Kernel Network","1.0");

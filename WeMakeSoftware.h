@@ -23,8 +23,3 @@ struct Frame{
 struct IEEE802 {
     unsigned char DMAC[6],SMAC[6],ET[2];
 };
-struct IEEE802IANA {
-    struct IEEE802IANA*Previous,*Next;
-    unsigned char ET[2]; 
-    int(*Reference)(struct Frame*,struct IEEE802*);
-};

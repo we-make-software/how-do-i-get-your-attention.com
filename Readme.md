@@ -219,3 +219,5 @@ For example:
 - `34525` represents **Internet Protocol version 6 (IPv6)**.
 
 These references are critical for identifying the protocol associated with each EtherType.
+
+A lot of packets are sent by the server itself, and instead of blocking them, I choose to simply use `CloseFrame`. I do this by checking both the destination and source MAC addresses: if the second least significant bit (LSB) is 1, then the MAC address is locally administered.
