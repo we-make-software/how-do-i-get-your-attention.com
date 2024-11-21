@@ -19,23 +19,9 @@ static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t s
 
 
 static inline int IEEE802A(struct Frame*frame,struct IEEE802*ieee802){
-    if(((ieee802->SMAC[0]&1)||(ieee802->DMAC[0]&1)||ieee802->DMAC[0]&2)||(ieee802->SMAC[0]&2)) return CloseFrame(frame);
-  
-   int value = ieee802->DMAC[0] & 12;  // Calculate DMAC[0] & 12
-    char buffer[32];
-    snprintf(buffer, sizeof(buffer), "DMAC & 12: %d", value);
-    printk(KERN_INFO "%s\n", buffer);
-   // Print("DMAC",ieee802->DMAC,0,5);
-   // Print("SMAC",ieee802->SMAC,0,5);
-    
-    /* switch ((ieee802->ET[0]<<8)|ieee802->ET[1]) 
-    {
-        case 2048:case 2054:case 34525:return RFC9542R(frame,ieee802);
-        case 34887:case 34888:return RFC5332R(frame,ieee802);
-        case 35151:return RFC8300R(frame,ieee802); 
-        default:return CloseFrame(frame);
-    }
-    */
+    if(ieee802->SMAC[0]&1||ieee802->DMAC[0]&1||ieee802->DMAC[0]&2||ieee802->SMAC[0]&2) return CloseFrame(frame);
+        
+   
     return CloseFrame(frame);
 }
 
