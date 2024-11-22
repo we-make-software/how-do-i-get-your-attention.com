@@ -20,6 +20,7 @@ struct Frame{
     char*IEE802Buffer;
     struct Standard*Standards;
 };
+
 enum Classification {
     AdministrativelyAssigned = 0,
     ExtendedLocal = 4,

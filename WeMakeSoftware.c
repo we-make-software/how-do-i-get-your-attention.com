@@ -15,78 +15,71 @@ static inline int SendFrame(struct Frame*frame);
 static inline char*GetStandard(struct Frame*frame,uint16_t version,uint16_t section);
 static inline int CloseStandard(struct Frame*frame,uint16_t version,uint16_t section);
 static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t section,char**pointer,int64_t position);
-
-static inline int RFC791A(struct Frame* frame,struct RFC791* rfc791, enum Classification Classification){
-  return CloseFrame(frame);
-}
-static inline int RFC8200A(struct Frame* frame, struct RFC8200* rfc8200, enum Classification Classification){
-  return CloseFrame(frame);
-}
+static inline bool CreateStandardNoPointer(struct Frame*frame, uint16_t version, uint16_t section,int64_t position);
 
 
-static inline int RFC791R(struct Frame* frame, enum Classification Classification){
-    char*Pointer;
-    CreateStandard(frame,791,0,&Pointer,14);
-    struct RFC791* rfc791 = (struct RFC791*)Pointer;
-    if(rfc791->V_IHL&64&&(rfc791->V_IHL&15)>=5){
-        {
-            uint8_t IHL=(rfc791->V_IHL&15)-5;
-            uint16_t ReadPoint=14+sizeof(struct RFC791);
-            for(uint8_t i=0;i<IHL;i++){
-                char*OptionPointer;
-                CreateStandard(frame,791,i+1,&OptionPointer,ReadPoint+(i*4));
-            }
-        }
-        return RFC791A(frame,rfc791,Classification);
-    }
-    return DropAndCloseFrame(frame);
-}
-static inline int RFC8200R(struct Frame* frame, enum Classification Classification){
-    char*Pointer;
-    CreateStandard(frame,802,0,&Pointer,14);
-    struct RFC8200* rfc8200 = (struct RFC8200*)Pointer;
-    return rfc8200->V_TC_FL[0]&96?RFC8200A(frame,rfc8200,Classification):DropAndCloseFrame(frame);
-}
-static inline int IEEE802EtherType(struct Frame* frame, struct IEEE802* ieee802, enum Classification Classification) {
-    switch ((ieee802->ET[0] << 8) | ieee802->ET[1]) {
-        case 2048:return RFC791R(frame,Classification);
-        case 34525:return RFC8200R(frame,Classification);
-        default:{
-            Print("IEEE802EtherType unknown ieee802->ET",ieee802->ET,0,1);
-            return CloseFrame(frame);
-        }
-    }
-}
-static inline int IEEE802A(struct Frame*frame,struct IEEE802*ieee802){
-    if(ieee802->SMAC[0]&1||ieee802->DMAC[0]&1||ieee802->DMAC[0]&2||ieee802->SMAC[0]&2)return CloseFrame(frame);
-    {
-        enum Classification DMACClassification = ieee802->DMAC[0] & 12;
-        if (DMACClassification==ExtendedLocal||DMACClassification==StandardAssigned)return DropAndCloseFrame(frame);
-        {
-            enum Classification SMACClassification = ieee802->SMAC[0] & 12;
-            if (SMACClassification == ExtendedLocal||SMACClassification== StandardAssigned||(DMACClassification==AdministrativelyAssigned&&SMACClassification!=Reserved)||(DMACClassification==Reserved&&SMACClassification!=AdministrativelyAssigned))return DropAndCloseFrame(frame);
-        }
-        if(DMACClassification==Reserved) goto IEEE802Reserved;
-        goto IEEE802AdministrativelyAssigned;
-    }
-    IEEE802Reserved:
-    return IEEE802EtherType(frame,ieee802,Reserved);
-    IEEE802AdministrativelyAssigned:
-    return IEEE802EtherType(frame,ieee802,AdministrativelyAssigned);
-}
-static inline int IEEE802R(struct Frame*frame){
-    char*Pointer;
-    return CreateStandard(frame,802,0,&Pointer,0)?IEEE802A(frame,(struct IEEE802*)Pointer):CloseFrame(frame);
-}
+
+
+
+
+
 static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_type*pt,struct net_device*orig_dev){
     struct Frame*frame;
     if (IsServerClose||skb->len<42||dev->name[0]!=101||dev->name[1]!=116||dev->name[2]!=104||!(frame=CreateFrame(dev->ifindex))){
         kfree_skb(skb); 
         return 1; 
     }
-    frame->Standards=NULL;
     frame->IEE802Buffer=skb_mac_header(frame->skb=skb);
-    return IEEE802R(frame);
+ 
+    struct IEEE802*ieee802;
+    {
+      char*Pointer;
+      if(!CreateStandard(frame,802,0,&Pointer,0)) return DropAndCloseFrame(frame);
+      ieee802=(struct IEEE802*)Pointer;
+    }
+    if(ieee802->SMAC[0]&1||ieee802->DMAC[0]&1||ieee802->DMAC[0]&2||ieee802->SMAC[0]&2)return CloseFrame(frame);
+    {
+        int DMACClassification=ieee802->DMAC[0]&12;
+        if (DMACClassification==4||DMACClassification==12)return DropAndCloseFrame(frame);
+        int SMACClassification=ieee802->SMAC[0]&12;
+        if (SMACClassification==4||SMACClassification==12||DMACClassification==SMACClassification)return DropAndCloseFrame(frame);
+    }
+   /*
+    switch ((ieee802->ET[0] << 8) | ieee802->ET[1]) {
+        case 2048:{
+            struct RFC791*rfc791;
+            {
+                char*Pointer;
+                if(!CreateStandard(frame,791,0,&Pointer,14))return DropAndCloseFrame(frame);
+                rfc791=(struct RFC791*)Pointer;
+                if(!(rfc791->V_IHL&64))return DropAndCloseFrame(frame);
+            } 
+            rfc791->V_IHL-=5;
+            {
+                uint16_t From=14+sizeof(struct RFC791);   
+                for(uint8_t i=rfc791->V_IHL;i>0&&!CreateStandardNoPointer(frame,791,i+1,From+(i*4));i--)return DropAndCloseFrame(frame);
+            }
+            goto IEEE802EtherTypeUnknown;
+        }
+        case 34525:{
+            struct RFC8200*rfc8200;
+            {
+                char*Pointer;
+                if (!CreateStandard(frame, 8200, 0, &Pointer, 14))return DropAndCloseFrame(frame);
+                rfc8200 = (struct RFC8200*)Pointer;
+                if(!(rfc8200->V_TC_FL[0]&96))return DropAndCloseFrame(frame);
+            }
+
+            goto IEEE802EtherTypeUnknown;
+        }
+        IEEE802EtherTypeUnknown:
+        default:{
+            Print("IEEE802EtherType unknown ieee802->ET",ieee802->ET,0,1);
+            return CloseFrame(frame);
+        }
+    }*/
+     Print("IEEE802EtherType unknown ieee802->ET",ieee802->ET,0,1);
+            return CloseFrame(frame);
 }
 #include<linux/slab.h>
 #include<linux/string.h>
@@ -152,11 +145,30 @@ static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t s
     frame->Standards = this;
     return true;
 }
+static inline bool CreateStandardNoPointer(struct Frame*frame, uint16_t version, uint16_t section,int64_t position) {
+    struct Standard*this;
+    for(this=frame->Standards;this&&!(this->Version==version&&this->Section==section);this=this->Previous);
+    if(this||!(this=waitForMemory(sizeof(struct Standard))))return false;
+    this->Version=version;
+    this->Section=section;
+    this->Next=NULL;
+    this->Data=frame->IEE802Buffer+position;
+    if((this->Previous=frame->Standards))frame->Standards->Next=this;
+    frame->Standards = this;
+    return true;
+}
 static inline int CloseFrame(struct Frame*frame) {
     if(!frame)return 0;
-    if(frame->Previous)frame->Previous->Next=frame->Next;
-    if(frame->Next)frame->Next->Previous=frame->Previous;
-    if(frame==Frames)Frames=frame->Previous?frame->Previous:NULL;
+    if(frame==Frames){
+        Frames=frame->Previous;
+        if(Frames&&Frames->Next)
+            Frames->Next=NULL;
+    }else {
+        if (frame->Previous) 
+            frame->Previous->Next = frame->Next;
+        if (frame->Next)
+            frame->Next->Previous = frame->Previous;
+    }
     if(frame->Standards)
       for(struct Standard*this=frame->Standards;this;this=this->Previous) 
           kfree(this);
@@ -177,7 +189,13 @@ static inline int DropAndCloseFrame(struct Frame*frame){
 static inline struct Frame*CreateFrame(uint8_t id) {
     struct Frame*frame;
     if(!(frame=waitForMemory(sizeof(struct Frame))))return NULL;
-    frame->Next=frame->Previous=NULL;
+        frame->Next=NULL;
+    if(Frames){
+        Frames->Next=frame;
+        frame->Previous=Frames;
+    }else
+       frame->Previous=NULL;
+    frame->Standards=NULL;
     frame->id=id;
     if((frame->Previous=Frames))Frames->Next=frame;
     return Frames=frame;
