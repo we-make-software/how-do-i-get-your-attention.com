@@ -283,17 +283,17 @@ I believe it’s important to note that no other types of data are being receive
 
 
 ```c
-static inline bool WeMakeSoftwareStep(struct IEEE802* ieee802) {
+static inline int WeMakeSoftwareStep(struct IEEE802* ieee802) {
     if (ieee802->DMAC[0] & 12) {
         // This will automatically be true if the packet is "Reserved."
         // Since the packet's contents are unknown, we just close it.
         // Returning true effectively closes the packet.
-        return true;
+        return 0;
     }
 
     // This area corresponds to "Administratively Assigned."
     // Please refer to the source code, which is open source and publicly available when needed.
-    return true;
+    return 0;
 }
 ```
 

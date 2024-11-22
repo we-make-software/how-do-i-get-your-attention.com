@@ -21,13 +21,17 @@ struct Frame{
     struct Standard*Standards;
 };
 enum Classification {
-    ADMINISTRATIVELY_ASSIGNED = 0,
-    EXTENDED_LOCAL = 4,
-    RESERVED = 8,
-    STANDARD_ASSIGNED = 12
+    AdministrativelyAssigned = 0,
+    ExtendedLocal = 4,
+    Reserved = 8,
+    StandardAssigned = 12
 };
 struct IEEE802 {
     unsigned char DMAC[6],SMAC[6],ET[2];
-    struct Frame*Frame;
-    enum Classification DMACClassification,SMACClassification;
+};
+struct RFC791 {
+    unsigned char V_IHL,TOS,L[2],ID[2],FO[2],TTL,P,HC[2],SA[4],DA[4]; 
+};
+struct RFC8200 {
+    unsigned char V_TC_FL[4],PL[2],NH,HL,SA[16],DA[16];
 };

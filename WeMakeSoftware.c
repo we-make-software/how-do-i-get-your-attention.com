@@ -16,25 +16,64 @@ static inline char*GetStandard(struct Frame*frame,uint16_t version,uint16_t sect
 static inline int CloseStandard(struct Frame*frame,uint16_t version,uint16_t section);
 static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t section,char**pointer,int64_t position);
 
-static inline bool WeMakeSoftwareStep(struct IEEE802* ieee802) {
-    Print("ieee802",ieee802->DMAC,0,1);
-    if (ieee802->DMAC[0] & 12) {
-        // This will automatically be true if the packet is "Reserved."
-        // Since the packet's contents are unknown, we just close it.
-        // Returning true effectively closes the packet.
-        return true;
-    }
-    // This area corresponds to "Administratively Assigned."
-    // Please refer to the source code, which is open source and publicly available when needed.
-    return true;
+static inline int RFC791A(struct Frame* frame,struct RFC791* rfc791, enum Classification Classification){
+  return CloseFrame(frame);
 }
-static inline int IEEE802A(struct Frame*frame,struct IEEE802*ieee802){
-      Print("ieee802",ieee802->DMAC,0,1);
-    if(ieee802->SMAC[0]&1||ieee802->DMAC[0]&1||ieee802->DMAC[0]&2||ieee802->SMAC[0]&2)return CloseFrame(frame);
-    ieee802->Frame=frame;
-    return CloseFrame(frame)?
+static inline int RFC8200A(struct Frame* frame, struct RFC8200* rfc8200, enum Classification Classification){
+  return CloseFrame(frame);
 }
 
+
+static inline int RFC791R(struct Frame* frame, enum Classification Classification){
+    char*Pointer;
+    CreateStandard(frame,791,0,&Pointer,14);
+    struct RFC791* rfc791 = (struct RFC791*)Pointer;
+    if(rfc791->V_IHL&64&&(rfc791->V_IHL&15)>=5){
+        {
+            uint8_t IHL=(rfc791->V_IHL&15)-5;
+            uint16_t ReadPoint=14+sizeof(struct RFC791);
+            for(uint8_t i=0;i<IHL;i++){
+                char*OptionPointer;
+                CreateStandard(frame,791,i+1,&OptionPointer,ReadPoint+(i*4));
+            }
+        }
+        return RFC791A(frame,rfc791,Classification);
+    }
+    return DropAndCloseFrame(frame);
+}
+static inline int RFC8200R(struct Frame* frame, enum Classification Classification){
+    char*Pointer;
+    CreateStandard(frame,802,0,&Pointer,14);
+    struct RFC8200* rfc8200 = (struct RFC8200*)Pointer;
+    return rfc8200->V_TC_FL[0]&96?RFC8200A(frame,rfc8200,Classification):DropAndCloseFrame(frame);
+}
+static inline int IEEE802EtherType(struct Frame* frame, struct IEEE802* ieee802, enum Classification Classification) {
+    switch ((ieee802->ET[0] << 8) | ieee802->ET[1]) {
+        case 2048:return RFC791R(frame,Classification);
+        case 34525:return RFC8200R(frame,Classification);
+        default:{
+            Print("IEEE802EtherType unknown ieee802->ET",ieee802->ET,0,1);
+            return CloseFrame(frame);
+        }
+    }
+}
+static inline int IEEE802A(struct Frame*frame,struct IEEE802*ieee802){
+    if(ieee802->SMAC[0]&1||ieee802->DMAC[0]&1||ieee802->DMAC[0]&2||ieee802->SMAC[0]&2)return CloseFrame(frame);
+    {
+        enum Classification DMACClassification = ieee802->DMAC[0] & 12;
+        if (DMACClassification==ExtendedLocal||DMACClassification==StandardAssigned)return DropAndCloseFrame(frame);
+        {
+            enum Classification SMACClassification = ieee802->SMAC[0] & 12;
+            if (SMACClassification == ExtendedLocal||SMACClassification== StandardAssigned||(DMACClassification==AdministrativelyAssigned&&SMACClassification!=Reserved)||(DMACClassification==Reserved&&SMACClassification!=AdministrativelyAssigned))return DropAndCloseFrame(frame);
+        }
+        if(DMACClassification==Reserved) goto IEEE802Reserved;
+        goto IEEE802AdministrativelyAssigned;
+    }
+    IEEE802Reserved:
+    return IEEE802EtherType(frame,ieee802,Reserved);
+    IEEE802AdministrativelyAssigned:
+    return IEEE802EtherType(frame,ieee802,AdministrativelyAssigned);
+}
 static inline int IEEE802R(struct Frame*frame){
     char*Pointer;
     return CreateStandard(frame,802,0,&Pointer,0)?IEEE802A(frame,(struct IEEE802*)Pointer):CloseFrame(frame);
@@ -115,10 +154,10 @@ static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t s
 }
 static inline int CloseFrame(struct Frame*frame) {
     if(!frame)return 0;
-    if (frame->Previous)frame->Previous->Next=frame->Next;
-    if (frame->Next)frame->Next->Previous=frame->Previous;
+    if(frame->Previous)frame->Previous->Next=frame->Next;
+    if(frame->Next)frame->Next->Previous=frame->Previous;
     if(frame==Frames)Frames=frame->Previous?frame->Previous:NULL;
-    if (frame->Standards)
+    if(frame->Standards)
       for(struct Standard*this=frame->Standards;this;this=this->Previous) 
           kfree(this);
     kfree(frame);
