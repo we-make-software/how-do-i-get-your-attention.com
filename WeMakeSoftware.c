@@ -15,14 +15,50 @@ static inline int SendFrame(struct Frame*frame);
 static inline char*GetStandard(struct Frame*frame,uint16_t version,uint16_t section);
 static inline int CloseStandard(struct Frame*frame,uint16_t version,uint16_t section);
 static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t section,char**pointer,int64_t position);
+static inline bool AddStandard(struct Frame*frame,uint16_t version,uint16_t section,char**pointer,char*data);
 static inline bool CreateStandardNoPointer(struct Frame*frame, uint16_t version, uint16_t section,int64_t position);
 
+// Standard          - Version - Section - Description
+// ---------------------------------------------------------------
+// IEEE802           - 802     - 0       - Ethernet standard for LAN/MAN.
+// IEEE802MACAddress - 802     - 1       - Source MAC address in Ethernet frames.
+// IEEE802MACAddress - 802     - 2       - Destination MAC address in Ethernet frames.
+// RFC791            - 791     - 0       - IPv4: Internet Protocol version 4.
+// RFC8200           - 8200    - 0       - IPv6: Internet Protocol version 6.
+// OtherStandard     - 1234    - 1       - Placeholder for future protocols.
 
+static inline int RFC791Reader(struct Frame*frame){
 
+    return CloseFrame(frame);
+}
+static inline int RFC8200Reader(struct Frame*frame){
 
+    return CloseFrame(frame);
+}
+static inline int IEEE802SwitchEtherTypeReader(struct Frame*frame){
+    struct IEEE802*ieee802=(struct IEEE802*)GetStandard(frame,802,0);
+    switch ((ieee802->ET[0]<<8)|ieee802->ET[1])
+    {
 
+        case 2048:return RFC791Reader(frame);
+        case 34525:return RFC8200Reader(frame);
+        default:{
+            Print("IEEE802SwitchEtherTypeReader",ieee802->ET,0,1);
+            return CloseFrame(frame);
+        }
+    }
+}
 
-
+static inline int IEEE802MACAddressReader(struct Frame*frame){
+    struct IEEE802*ieee802;   
+    struct IEEE802MACAddress*ieee802SMAC_IEEE802MACAddress,*ieee802DMAC_IEEE802MACAddress;  
+    if(!CreateStandard(frame,802,0,(char**)&ieee802,0)||!AddStandard(frame,802,1,(char**)&ieee802SMAC_IEEE802MACAddress,ieee802->SMAC))return DropAndCloseFrame(frame);
+    if(ieee802SMAC_IEEE802MACAddress->LocallyAdministered||ieee802SMAC_IEEE802MACAddress->Multicast)return CloseFrame(frame);  
+    if(!AddStandard(frame,802,2,(char**)&ieee802DMAC_IEEE802MACAddress,ieee802->DMAC))return DropAndCloseFrame(frame);
+    if(ieee802DMAC_IEEE802MACAddress->LocallyAdministered||ieee802DMAC_IEEE802MACAddress->Multicast)return CloseFrame(frame);  
+    if(ieee802SMAC_IEEE802MACAddress->VendorSpecific==ieee802DMAC_IEEE802MACAddress->VendorSpecific||ieee802SMAC_IEEE802MACAddress->VendorSpecific==4||ieee802DMAC_IEEE802MACAddress->VendorSpecific==4||ieee802SMAC_IEEE802MACAddress->VendorSpecific==12||ieee802DMAC_IEEE802MACAddress->VendorSpecific==12)return DropAndCloseFrame(frame);
+    return IEEE802SwitchEtherTypeReader(frame);
+}
 static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_type*pt,struct net_device*orig_dev){
     struct Frame*frame;
     if (IsServerClose||skb->len<42||dev->name[0]!=101||dev->name[1]!=116||dev->name[2]!=104||!(frame=CreateFrame(dev->ifindex))){
@@ -30,72 +66,25 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
         return 1; 
     }
     frame->IEE802Buffer=skb_mac_header(frame->skb=skb);
- 
-    struct IEEE802*ieee802;
-    {
-      char*Pointer;
-      if(!CreateStandard(frame,802,0,&Pointer,0)) return DropAndCloseFrame(frame);
-      ieee802=(struct IEEE802*)Pointer;
-    }
-    if(ieee802->SMAC[0]&1||ieee802->DMAC[0]&1||ieee802->DMAC[0]&2||ieee802->SMAC[0]&2)return CloseFrame(frame);
-    {
-        int DMACClassification=ieee802->DMAC[0]&12;
-        if (DMACClassification==4||DMACClassification==12)return DropAndCloseFrame(frame);
-        int SMACClassification=ieee802->SMAC[0]&12;
-        if (SMACClassification==4||SMACClassification==12||DMACClassification==SMACClassification)return DropAndCloseFrame(frame);
-    }
-   /*
-    switch ((ieee802->ET[0] << 8) | ieee802->ET[1]) {
-        case 2048:{
-            struct RFC791*rfc791;
-            {
-                char*Pointer;
-                if(!CreateStandard(frame,791,0,&Pointer,14))return DropAndCloseFrame(frame);
-                rfc791=(struct RFC791*)Pointer;
-                if(!(rfc791->V_IHL&64))return DropAndCloseFrame(frame);
-            } 
-            rfc791->V_IHL-=5;
-            {
-                uint16_t From=14+sizeof(struct RFC791);   
-                for(uint8_t i=rfc791->V_IHL;i>0&&!CreateStandardNoPointer(frame,791,i+1,From+(i*4));i--)return DropAndCloseFrame(frame);
-            }
-            goto IEEE802EtherTypeUnknown;
-        }
-        case 34525:{
-            struct RFC8200*rfc8200;
-            {
-                char*Pointer;
-                if (!CreateStandard(frame, 8200, 0, &Pointer, 14))return DropAndCloseFrame(frame);
-                rfc8200 = (struct RFC8200*)Pointer;
-                if(!(rfc8200->V_TC_FL[0]&96))return DropAndCloseFrame(frame);
-            }
-
-            goto IEEE802EtherTypeUnknown;
-        }
-        IEEE802EtherTypeUnknown:
-        default:{
-            Print("IEEE802EtherType unknown ieee802->ET",ieee802->ET,0,1);
-            return CloseFrame(frame);
-        }
-    }*/
-     Print("IEEE802EtherType unknown ieee802->ET",ieee802->ET,0,1);
-            return CloseFrame(frame);
+    return IEEE802MACAddressReader(frame);
 }
 #include<linux/slab.h>
 #include<linux/string.h>
-static void Print(const char*title,const unsigned char*data,int from,int to){
-    char*buffer=waitForMemory(strlen(title)+8*(to-from+1)+(to-from)+2);
+static void Print(const char *title, const unsigned char *data, int from, int to) {
+    int length = to - from + 1;  
+    char *buffer = waitForMemory(strlen(title)+8*length + length + 2); 
     strcpy(buffer,title);
     int index=strlen(title);
-    buffer[index++]=58;
-    buffer[index++]=32;
+    buffer[index++]=58;  
+    buffer[index++]=32;  
     for(int i=from;i<=to;i++){
-        for (int j=7;j>= 0;j--)buffer[index++]=((data[i]>>j)&1)?49:48;
-        buffer[index++]=32;
+        for (int j = 7; j >= 0; j--) 
+             buffer[index++] = ((data[i] >> j) & 1) ? 49 : 48; 
+        buffer[index++] = 32; 
     }
-    buffer[index-1]=0;
+    buffer[index-1]=0;  
     printk(KERN_INFO "%s\n", buffer);
-    kfree(buffer);
+    kfree(buffer);  
 }
 #include<linux/mm.h>
 #include<linux/swap.h>
@@ -141,6 +130,18 @@ static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t s
     this->Section=section;
     this->Next=NULL;
     *pointer=this->Data=frame->IEE802Buffer+position;
+    if((this->Previous=frame->Standards))frame->Standards->Next=this;
+    frame->Standards = this;
+    return true;
+}
+static inline bool AddStandard(struct Frame*frame,uint16_t version,uint16_t section,char**pointer,char*data) {
+    struct Standard*this;
+    for(this=frame->Standards;this&&!(this->Version==version&&this->Section==section);this=this->Previous);
+    if(this||!(this=waitForMemory(sizeof(struct Standard))))return false;
+    this->Version=version;
+    this->Section=section;
+    this->Next=NULL;
+    *pointer=data;
     if((this->Previous=frame->Standards))frame->Standards->Next=this;
     frame->Standards = this;
     return true;
@@ -222,8 +223,8 @@ static int __init wms_init(void){
 module_init(wms_init);
 static void __exit wms_exit(void){
     IsServerClose=true;
-    while(Frames)msleep(100); 
     dev_remove_pack(&Gateway);
+    while(Frames)msleep(100); 
 }
 module_exit(wms_exit);
 MODULE_INFO_SETUP("Pirasath Luxchumykanthan","WeMakeSoftware Kernel Network","1.0");
