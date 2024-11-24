@@ -26,20 +26,17 @@ static inline bool CreateStandardNoPointer(struct Frame*frame, uint16_t version,
 // RFC791                    - 791     - 0       - IPv4: Internet Protocol version 4.
 // RFC791TypeOfService       - 791     - 1       - TOS: Precedence, Delay, Throughput, Reliability, Reserved.
 // RFC8200                   - 8200    - 0       - IPv6: Internet Protocol version 6.
+// RFC2474                   - 2474    - 0       - DSCP: Differentiated Services Code Point (QoS) and ECN.
 // OtherStandard             - 1234    - 1       - Placeholder for future protocols.
 
 
 
+
 static inline int RFC791TypeOfServiceReader(struct Frame*frame){
-    struct RFC791 *rfc791=(struct RFC791*)GetStandard(frame,791,0);
-    struct RFC791TypeOfService *rfc791TypeOfService;
-    if(!AddStandard(frame,791,1,(char**)&rfc791TypeOfService,&rfc791->TOS))return DropAndCloseFrame(frame);
-    printk(KERN_INFO "RFC791TypeOfService Data:\n");
-    printk(KERN_INFO "Precedence: %u\n", rfc791TypeOfService->Precedence);
-    printk(KERN_INFO "Delay: %u\n", rfc791TypeOfService->Delay);
-    printk(KERN_INFO "Throughput: %u\n", rfc791TypeOfService->Throughput);
-    printk(KERN_INFO "Reliability: %u\n", rfc791TypeOfService->Reliability);
-    printk(KERN_INFO "Reserved: %u\n", rfc791TypeOfService->Reserved);
+    struct RFC791*rfc791=(struct RFC791*)GetStandard(frame,791,0);
+    struct RFC791TypeOfService*rfc791TypeOfService;
+    struct RFC2474*rfc2474;
+    if(!AddStandard(frame,791,1,(char**)&rfc791TypeOfService,&rfc791->TOS)||rfc791TypeOfService->Precedence||rfc791TypeOfService->Throughput||rfc791TypeOfService->Reliability|| rfc791TypeOfService->Reliability|| rfc791TypeOfService->Reserved||!CloseStandard(frame,791,1)||!AddStandard(frame,2474,0,(char**)&rfc2474,&rfc791->TOS))return DropAndCloseFrame(frame);
     return CloseFrame(frame);
 }
 
@@ -130,15 +127,15 @@ static inline char*GetStandard(struct Frame*frame,uint16_t version,uint16_t sect
     return this?this->Data:NULL;
 }
 static inline int CloseStandard(struct Frame*frame,uint16_t version,uint16_t section){
-    if(!frame||!frame->Standards)return NET_RX_DROP; 
+    if(!frame||!frame->Standards)return -1; 
     struct Standard*this;
     for(this=frame->Standards;this&&!(this->Version==version&&this->Section==section);this=this->Previous);
-    if(!this)return NET_RX_DROP; 
+    if(!this)return 0; 
     if(this->Previous)this->Previous->Next=this->Next;
     if(this->Next)this->Next->Previous=this->Previous;
     if(frame->Standards==this)frame->Standards=this->Previous;
     kfree(this);
-    return NET_RX_SUCCESS; 
+    return 1; 
 }
 static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t section,char**pointer,int64_t position) {
     struct Standard*this;
@@ -240,8 +237,8 @@ static int __init wms_init(void){
 }
 module_init(wms_init);
 static void __exit wms_exit(void){
-    IsServerClose=true;
     dev_remove_pack(&Gateway);
+    IsServerClose=true;
     while(Frames)msleep(100); 
 }
 module_exit(wms_exit);
