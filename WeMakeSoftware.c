@@ -18,32 +18,39 @@ static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t s
 static inline bool AddStandard(struct Frame*frame,uint16_t version,uint16_t section,char**pointer,char*data);
 static inline bool CreateStandardNoPointer(struct Frame*frame, uint16_t version, uint16_t section,int64_t position);
 
-// Standard          - Version - Section - Description
+// Standard                  - Version - Section - Description
 // ---------------------------------------------------------------
-// IEEE802           - 802     - 0       - Ethernet standard for LAN/MAN.
-// IEEE802MACAddress - 802     - 1       - Source MAC address in Ethernet frames.
-// IEEE802MACAddress - 802     - 2       - Destination MAC address in Ethernet frames.
-// RFC791            - 791     - 0       - IPv4: Internet Protocol version 4.
-// RFC8200           - 8200    - 0       - IPv6: Internet Protocol version 6.
-// OtherStandard     - 1234    - 1       - Placeholder for future protocols.
+// IEEE802                   - 802     - 0       - Ethernet standard for LAN/MAN.
+// IEEE802MACAddress         - 802     - 1       - Source MAC address in Ethernet frames.
+// IEEE802MACAddress         - 802     - 2       - Destination MAC address in Ethernet frames.
+// RFC791                    - 791     - 0       - IPv4: Internet Protocol version 4.
+// RFC791TypeOfService       - 791     - 1       - TOS: Precedence, Delay, Throughput, Reliability, Reserved.
+// RFC8200                   - 8200    - 0       - IPv6: Internet Protocol version 6.
+// OtherStandard             - 1234    - 1       - Placeholder for future protocols.
 
-static inline int RFC791Reader(struct Frame*frame){
-    struct rf791*rf791;
-    if(!CreateStandard(frame,791,0,(char**)&rf791,14))return DropAndCloseFrame(frame);
-
+static inline int RFC791TypeOfServiceReader(struct Frame*frame){
+    struct RFC791 *rfc791=(struct RFC791*)GetStandard(frame,791,0);
+    struct RFC791TypeOfService *rfc791TypeOfService;
+    if(!AddStandard(frame,791,1,(char**)&rfc791TypeOfService,rfc791->TOS))return DropAndCloseFrame(frame);
     return CloseFrame(frame);
 }
+
+static inline int RFC791Reader(struct Frame*frame){
+    struct RFC791 *rfc791; 
+    if(!CreateStandard(frame, 791, 0, (char**)&rfc791, 14)||!(rfc791->V&4)|| rfc791->IHL<5)return DropAndCloseFrame(frame);
+    return RFC791TypeOfServiceReader(frame);
+}
 static inline int RFC8200Reader(struct Frame*frame){
-    struct RFC8200*rf8200;
-    if(!CreateStandard(frame,8200,0,(char**)&rf8200,14))return DropAndCloseFrame(frame);
-    
+    struct RFC8200*rfc8200;
+    if(!CreateStandard(frame,8200,0,(char**)&rfc8200,14)||!(rfc8200->V&6))return DropAndCloseFrame(frame);
+
+
     return CloseFrame(frame);
 }
 static inline int IEEE802SwitchEtherTypeReader(struct Frame*frame){
     struct IEEE802*ieee802=(struct IEEE802*)GetStandard(frame,802,0);
     switch ((ieee802->ET[0]<<8)|ieee802->ET[1])
     {
-
         case 2048:return RFC791Reader(frame);
         case 34525:return RFC8200Reader(frame);
         default:{
