@@ -15,7 +15,7 @@ static inline int SendFrame(struct Frame*frame);
 static inline char*GetStandard(struct Frame*frame,uint16_t version,uint16_t section);
 static inline int CloseStandard(struct Frame*frame,uint16_t version,uint16_t section);
 static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t section,char**pointer,int64_t position);
-static inline bool AddStandard(struct Frame*frame,uint16_t version,uint16_t section,char**pointer,char*data);
+static inline bool AddStandard(struct Frame*frame,uint16_t version,uint16_t section,char**pointer,char*data,bool IsDynamic);
 static inline bool CreateStandardNoPointer(struct Frame*frame, uint16_t version, uint16_t section,int64_t position);
 
 // Standard                  - Version - Section - Description
@@ -30,27 +30,41 @@ static inline bool CreateStandardNoPointer(struct Frame*frame, uint16_t version,
 // OtherStandard             - 1234    - 1       - Placeholder for future protocols.
 
 
-
+static inline int RFC2474Reader(struct Frame*frame){
+    struct RFC2474*rfc2474 = (struct RFC2474*)GetStandard(frame, 2474, 0);
+    return CloseFrame(frame);
+}
 
 static inline int RFC791TypeOfServiceReader(struct Frame*frame){
     struct RFC791*rfc791=(struct RFC791*)GetStandard(frame,791,0);
     struct RFC791TypeOfService*rfc791TypeOfService;
     struct RFC2474*rfc2474;
-    if(!AddStandard(frame,791,1,(char**)&rfc791TypeOfService,&rfc791->TOS)||rfc791TypeOfService->Precedence||rfc791TypeOfService->Throughput||rfc791TypeOfService->Reliability|| rfc791TypeOfService->Reliability|| rfc791TypeOfService->Reserved||!CloseStandard(frame,791,1)||!AddStandard(frame,2474,0,(char**)&rfc2474,&rfc791->TOS))return DropAndCloseFrame(frame);
-    return CloseFrame(frame);
-}
+    if(!AddStandard(frame,791,1,(char**)&rfc791TypeOfService,&rfc791->TOS,false)||rfc791TypeOfService->Precedence||rfc791TypeOfService->Throughput||rfc791TypeOfService->Reliability|| rfc791TypeOfService->Reliability|| rfc791TypeOfService->Reserved||
+    
+    //!CloseStandard(frame,791,1)||
+    
+    !AddStandard(frame,2474,0,(char**)&rfc2474,&rfc791->TOS,false))return DropAndCloseFrame(frame);
+    struct IEEE802MACAddress*ieee802SMAC_IEEE802MACAddress=(struct IEEE802MACAddress*)GetStandard(frame,802,1), *ieee802DMAC_IEEE802MACAddress=(struct IEEE802MACAddress*)GetStandard(frame,802,2);
+    printk(KERN_INFO "Source MAC Address Vendor: %d\n", ieee802SMAC_IEEE802MACAddress->VendorSpecific);
+    printk(KERN_INFO "Destination MAC Address Vendor: %d\n", ieee802DMAC_IEEE802MACAddress->VendorSpecific);
+    printk(KERN_INFO "TOS Delay: %d\n", rfc791TypeOfService->Delay);
 
+    return RFC2474Reader(frame);
+}
 static inline int RFC791Reader(struct Frame*frame){
     struct RFC791 *rfc791; 
-    if(!CreateStandard(frame, 791, 0, (char**)&rfc791, 14)||!(rfc791->V&4)|| rfc791->IHL<5)return DropAndCloseFrame(frame);
+    if(!CreateStandard(frame, 791, 0, (char**)rfc791, 14)||!(rfc791->V&4)|| rfc791->IHL<5)return DropAndCloseFrame(frame);
     return RFC791TypeOfServiceReader(frame);
 }
 static inline int RFC8200Reader(struct Frame*frame){
     struct RFC8200*rfc8200;
     if(!CreateStandard(frame,8200,0,(char**)&rfc8200,14)||!(rfc8200->V&6))return DropAndCloseFrame(frame);
-
-
-    return CloseFrame(frame);
+    unsigned char *TrafficClass=waitForMemory(sizeof(unsigned char));
+    if(!TrafficClass)return DropAndCloseFrame(frame);
+    *TrafficClass = (rfc8200->TC << 4) | rfc8200->TCN;
+    struct RFC2474*rfc2474;
+    if(!AddStandard(frame, 2474, 0, (char **)&rfc2474, TrafficClass,true))return DropAndCloseFrame(frame);
+    return RFC2474Reader(frame);
 }
 static inline int IEEE802SwitchEtherTypeReader(struct Frame*frame){
     struct IEEE802*ieee802=(struct IEEE802*)GetStandard(frame,802,0);
@@ -67,9 +81,9 @@ static inline int IEEE802SwitchEtherTypeReader(struct Frame*frame){
 static inline int IEEE802MACAddressReader(struct Frame*frame){
     struct IEEE802*ieee802;   
     struct IEEE802MACAddress*ieee802SMAC_IEEE802MACAddress,*ieee802DMAC_IEEE802MACAddress;  
-    if(!CreateStandard(frame,802,0,(char**)&ieee802,0)||!AddStandard(frame,802,1,(char**)&ieee802SMAC_IEEE802MACAddress,ieee802->SMAC))return DropAndCloseFrame(frame);
+    if(!CreateStandard(frame,802,0,(char**)&ieee802,0)||!AddStandard(frame,802,1,(char**)&ieee802SMAC_IEEE802MACAddress,ieee802->SMAC,false))return DropAndCloseFrame(frame);
     if(ieee802SMAC_IEEE802MACAddress->LocallyAdministered||ieee802SMAC_IEEE802MACAddress->Multicast)return CloseFrame(frame);  
-    if(!AddStandard(frame,802,2,(char**)&ieee802DMAC_IEEE802MACAddress,ieee802->DMAC))return DropAndCloseFrame(frame);
+    if(!AddStandard(frame,802,2,(char**)&ieee802DMAC_IEEE802MACAddress,ieee802->DMAC,false))return DropAndCloseFrame(frame);
     if(ieee802DMAC_IEEE802MACAddress->LocallyAdministered||ieee802DMAC_IEEE802MACAddress->Multicast)return CloseFrame(frame);  
     if(ieee802SMAC_IEEE802MACAddress->VendorSpecific==ieee802DMAC_IEEE802MACAddress->VendorSpecific||ieee802SMAC_IEEE802MACAddress->VendorSpecific==4||ieee802DMAC_IEEE802MACAddress->VendorSpecific==4||ieee802SMAC_IEEE802MACAddress->VendorSpecific==12||ieee802DMAC_IEEE802MACAddress->VendorSpecific==12)return DropAndCloseFrame(frame);
     return IEEE802SwitchEtherTypeReader(frame);
@@ -134,6 +148,7 @@ static inline int CloseStandard(struct Frame*frame,uint16_t version,uint16_t sec
     if(this->Previous)this->Previous->Next=this->Next;
     if(this->Next)this->Next->Previous=this->Previous;
     if(frame->Standards==this)frame->Standards=this->Previous;
+    if(this->IsDynamic)kfree(this->Data);
     kfree(this);
     return 1; 
 }
@@ -149,10 +164,11 @@ static inline bool CreateStandard(struct Frame*frame,uint16_t version,uint16_t s
     frame->Standards = this;
     return true;
 }
-static inline bool AddStandard(struct Frame*frame,uint16_t version,uint16_t section,char**pointer,char*data) {
+static inline bool AddStandard(struct Frame*frame,uint16_t version,uint16_t section,char**pointer,char*data, bool IsDynamic) {
     struct Standard*this;
     for(this=frame->Standards;this&&!(this->Version==version&&this->Section==section);this=this->Previous);
     if(this||!(this=waitForMemory(sizeof(struct Standard))))return false;
+    this->IsDynamic=IsDynamic;
     this->Version=version;
     this->Section=section;
     this->Next=NULL;
@@ -187,7 +203,10 @@ static inline int CloseFrame(struct Frame*frame) {
     }
     if(frame->Standards)
       for(struct Standard*this=frame->Standards;this;this=this->Previous) 
-          kfree(this);
+      {
+        if(this->IsDynamic)kfree(this->Data);
+         kfree(this);
+      }
     kfree(frame);
     return 0;
 }
