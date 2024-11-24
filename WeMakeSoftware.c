@@ -28,10 +28,18 @@ static inline bool CreateStandardNoPointer(struct Frame*frame, uint16_t version,
 // RFC8200                   - 8200    - 0       - IPv6: Internet Protocol version 6.
 // OtherStandard             - 1234    - 1       - Placeholder for future protocols.
 
+
+
 static inline int RFC791TypeOfServiceReader(struct Frame*frame){
     struct RFC791 *rfc791=(struct RFC791*)GetStandard(frame,791,0);
     struct RFC791TypeOfService *rfc791TypeOfService;
-    if(!AddStandard(frame,791,1,(char**)&rfc791TypeOfService,rfc791->TOS))return DropAndCloseFrame(frame);
+    if(!AddStandard(frame,791,1,(char**)&rfc791TypeOfService,&rfc791->TOS))return DropAndCloseFrame(frame);
+    printk(KERN_INFO "RFC791TypeOfService Data:\n");
+    printk(KERN_INFO "Precedence: %u\n", rfc791TypeOfService->Precedence);
+    printk(KERN_INFO "Delay: %u\n", rfc791TypeOfService->Delay);
+    printk(KERN_INFO "Throughput: %u\n", rfc791TypeOfService->Throughput);
+    printk(KERN_INFO "Reliability: %u\n", rfc791TypeOfService->Reliability);
+    printk(KERN_INFO "Reserved: %u\n", rfc791TypeOfService->Reserved);
     return CloseFrame(frame);
 }
 
