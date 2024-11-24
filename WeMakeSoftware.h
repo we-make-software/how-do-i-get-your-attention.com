@@ -13,11 +13,6 @@ struct Standard{
     uint16_t Version,Section;
     char*Data;
 };
-enum Access{
-    Read = 0,
-    Write = 1,
-    Execute = 2
-};
 struct Frame{
     struct Frame*Previous,*Next;
     struct sk_buff*skb; 
@@ -25,22 +20,14 @@ struct Frame{
     char*IEE802Buffer;
     struct Standard*Standards;
 };
-
-enum Classification {
+struct IEEE802 {unsigned char DMAC:48,SMAC:48,ET:16;};
+/*
+    VendorSpecific:
     AdministrativelyAssigned = 0,
     ExtendedLocal = 4,
     Reserved = 8,
     StandardAssigned = 12
-};
-struct IEEE802 {
-    unsigned char DMAC[6],SMAC[6],ET[2];
-};
-struct IEEE802MACAddress {
-    char LocallyAdministered:1,Multicast:1,VendorSpecific:2,Reserved:4;
-};
-struct RFC791{
-    unsigned char V:4,IHL:4,TOS,L[2],ID[2],FO[2],TTL,P,HC[2],SA[4],DA[4]; 
-};
-struct RFC8200{
-    unsigned char V_TC_FL[4],PL[2],NH,HL,SA[16],DA[16];
-};
+*/
+struct IEEE802MACAddress {unsigned char LocallyAdministered:1,Multicast:1,VendorSpecific:2,Reserved:4;};
+struct RFC791{unsigned char V:4,IHL:4,TOS,L:16,ID:16,FO:16,TTL,P,HC:16,SA:32,DA:32;};
+struct RFC8200{unsigned char V:4,TC:8,FL:20,PL:16,NH,HL,SA:128,DA:128;};

@@ -299,6 +299,17 @@ static inline int WeMakeSoftwareStep(struct IEEE802* ieee802) {
 
 For more information, visit [We-Make-Software](https://www.we-make-software.com).
 
+
+| Standard          | Version | Section | Description                                   |
+|-------------------|---------|---------|-----------------------------------------------|
+| IEEE802           | 802     | 0       | Ethernet standard for LAN/MAN.               |
+| IEEE802MACAddress | 802     | 1       | Source MAC address in Ethernet frames.       |
+| IEEE802MACAddress | 802     | 2       | Destination MAC address in Ethernet frames.  |
+| RFC791            | 791     | 0       | IPv4: Internet Protocol version 4.           |
+| RFC8200           | 8200    | 0       | IPv6: Internet Protocol version 6.           |
+| OtherStandard     | 1234    | 1       | Placeholder for future protocols.            |
+
+
 1. FrameReader->IEEE802MACAddressReader->IEEE802SwitchEtherTypeReader
 
 Option: 

@@ -28,11 +28,15 @@ static inline bool CreateStandardNoPointer(struct Frame*frame, uint16_t version,
 // OtherStandard     - 1234    - 1       - Placeholder for future protocols.
 
 static inline int RFC791Reader(struct Frame*frame){
+    struct rf791*rf791;
+    if(!CreateStandard(frame,791,0,(char**)&rf791,14))return DropAndCloseFrame(frame);
 
     return CloseFrame(frame);
 }
 static inline int RFC8200Reader(struct Frame*frame){
-
+    struct RFC8200*rf8200;
+    if(!CreateStandard(frame,8200,0,(char**)&rf8200,14))return DropAndCloseFrame(frame);
+    
     return CloseFrame(frame);
 }
 static inline int IEEE802SwitchEtherTypeReader(struct Frame*frame){
@@ -48,7 +52,6 @@ static inline int IEEE802SwitchEtherTypeReader(struct Frame*frame){
         }
     }
 }
-
 static inline int IEEE802MACAddressReader(struct Frame*frame){
     struct IEEE802*ieee802;   
     struct IEEE802MACAddress*ieee802SMAC_IEEE802MACAddress,*ieee802DMAC_IEEE802MACAddress;  
@@ -209,11 +212,11 @@ static inline int SetSizeFrame(struct Frame*frame,uint16_t Size){
 }
 static inline int SendFrame(struct Frame*frame){
     struct net_device*dev;
-    if(!frame||!(dev=dev_get_by_index(&init_net,frame->id)))return NET_RX_DROP;
+    if(!frame||!(dev=dev_get_by_index(&init_net,frame->id)))return -1;
     frame->skb->dev=dev;
     int result=dev_queue_xmit(frame->skb);
     dev_put(dev);
-    return result>=0;
+    return result;
 }
 static int __init wms_init(void){
     IsServerClose=false;
