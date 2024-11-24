@@ -310,11 +310,11 @@ For more information, visit [We-Make-Software](https://www.we-make-software.com)
 | OtherStandard     | 1234    | 1       | Placeholder for future protocols.            |
 
 
-1. FrameReader->IEEE802MACAddressReader->IEEE802SwitchEtherTypeReader
+# 1. FrameReader->IEEE802MACAddressReader->IEEE802SwitchEtherTypeReader:
 
 Option: 
-    2. RFC791Reader
-    3. RFC8200Reader
+- 2. RFC791Reader
+- 3. RFC8200Reader
 
-2. RFC791Reader->
-3. RFC8200Reader
+# 2. RFC791Reader->
+# 3. RFC8200Reader->
