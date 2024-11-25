@@ -306,7 +306,6 @@ For more information, visit [We-Make-Software](https://www.we-make-software.com)
 | IEEE802MACAddress       | 802     | 1       | Source MAC address in Ethernet frames.       |
 | IEEE802MACAddress       | 802     | 2       | Destination MAC address in Ethernet frames.  |
 | RFC791                  | 791     | 0       | IPv4: Internet Protocol version 4.           |
-| RFC791TypeOfService     | 791     | 1       | TOS: Precedence, Delay, Throughput, Reliability, Reserved. |
 | RFC8200                 | 8200    | 0       | IPv6: Internet Protocol version 6.           |
 | RFC2474                 | 2474    | 0       | DSCP: Differentiated Services Code Point (QoS) and ECN. |
 | OtherStandard           | 1234    | 1       | Placeholder for future protocols.            |
@@ -320,7 +319,7 @@ Option:
 - 2. RFC791Reader
 - 3. RFC8200Reader
 
-# 2. RFC791Reader->RFC791TypeOfServiceReader->(4.)RFC2474Reader
+# 2. RFC791Reader->(4.)RFC2474Reader
 
 # 3. RFC8200Reader->(4.)RFC2474Reader
 
