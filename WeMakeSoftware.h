@@ -3,32 +3,42 @@
 #include<linux/kernel.h>
 #include<linux/types.h>
 #include<linux/netdevice.h>
+#include<linux/time.h>
 #define MODULE_INFO_SETUP(author,description,version)\
 MODULE_LICENSE("GPL");\
 MODULE_AUTHOR(author);\
 MODULE_DESCRIPTION(description);\
 MODULE_VERSION(version);
+struct Link {
+    struct Link *Previous, *Next;
+    uint16_t ID; 
+    unsigned char*Data; 
+};
+
 struct Standard{
     struct Standard*Previous,*Next;
     uint16_t Version,Section;
     bool IsDynamic;
-    char*Data;
+    struct Link*Links;
+    unsigned char*Data;
 };
+
 struct Frame{
     struct Frame*Previous,*Next;
     struct sk_buff*skb; 
-    int id; 
-    char*IEE802Buffer;
+    int id;
+    int Status; 
+    unsigned char*IEE802Buffer;
     struct Standard*Standards;
 };
+
+
 struct IEEE802 {unsigned char DMAC[6],SMAC[6],ET[2];};
 /*
     VendorSpecific:
     AdministrativelyAssigned = 0,
     Reserved = 8
 */
-struct IEEE802MACAddress {unsigned char LocallyAdministered:1,Multicast:1,VendorSpecific:2,Reserved:4;};
-struct RFC791{unsigned char IHL:4,V:4,TOS,L[8],ID[8],FO[8],TTL,P,HC[8],SA[4],DA[4];};
-struct RFC8200 {unsigned char TC:4,V:4,TCN:4,FL:4,FLN[2],PL[2],NH,HL,SA[16],DA[16];};
-struct RFC2474 {unsigned char DSCP:6,CU:2;};
+struct IEEE802MACAddress {unsigned char LocallyAdministered:1,Multicast:1,VendorSpecific:2,Reserved:4,Address[5];};
+
 
