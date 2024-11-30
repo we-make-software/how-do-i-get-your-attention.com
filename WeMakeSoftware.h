@@ -3,7 +3,8 @@
 #include<linux/kernel.h>
 #include<linux/types.h>
 #include<linux/netdevice.h>
-#include<linux/time.h>
+#include<linux/ktime.h>
+#include<linux/kthread.h>
 #define MODULE_INFO_SETUP(author,description,version)\
 MODULE_LICENSE("GPL");\
 MODULE_AUTHOR(author);\
@@ -14,7 +15,6 @@ struct Link {
     uint16_t ID; 
     unsigned char*Data; 
 };
-
 struct Standard{
     struct Standard*Previous,*Next;
     uint16_t Version,Section;
@@ -22,23 +22,37 @@ struct Standard{
     struct Link*Links;
     unsigned char*Data;
 };
-
+struct Status
+{
+    unsigned char Request:4,Response:4;
+};
 struct Frame{
     struct Frame*Previous,*Next;
     struct sk_buff*skb; 
     int id;
-    int Status; 
+    struct Status Status; 
+    ktime_t Start, End;
     unsigned char*IEE802Buffer;
     struct Standard*Standards;
 };
+enum ThreadProcess{
+    ThreadProcessWait,
+    ThreadProcessRunning,
+    ThreadProcessClose
+};
 
+struct ThreadJob {
+    struct ThreadTask*Previous,*Next;
+    struct task_struct*Thread;
+};
 
-struct IEEE802 {unsigned char DMAC[6],SMAC[6],ET[2];};
-/*
-    VendorSpecific:
-    AdministrativelyAssigned = 0,
-    Reserved = 8
-*/
-struct IEEE802MACAddress {unsigned char LocallyAdministered:1,Multicast:1,VendorSpecific:2,Reserved:4,Address[5];};
-
-
+struct Job {
+    struct Job *Previous, *Next; 
+    void *Data;
+    int (*JobFunction)(void*);
+};
+struct ThreadToDo {
+    struct ThreadToDo *Previous, *Next;
+    struct Job *Jobs;
+    
+};
