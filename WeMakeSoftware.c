@@ -27,8 +27,7 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
     }
     frame->IEE802Buffer=skb_mac_header(frame->skb=skb);
     if(!(frame->IEE802Buffer[0]&3)&&!(frame->IEE802Buffer[6]&3)){
-        Print("Destination MAC",frame->IEE802Buffer,0,5);
-        Print("Souce MAC",frame->IEE802Buffer,6,11);
+    
         ShowTimeByFrame(frame);  
         return CloseFrame(frame);  
     }
@@ -81,32 +80,19 @@ static inline bool waitForMemoryIsAvailable(unsigned long memoryRequiredBytes){
 static inline void*waitForMemory(unsigned long memoryRequiredBytes){return waitForMemoryIsAvailable(memoryRequiredBytes)?kmalloc(memoryRequiredBytes,GFP_KERNEL):NULL;}
 static struct packet_type Gateway={.type=htons(ETH_P_ALL),.func=FrameReader,.ignore_outgoing=1};
 
-static inline int BackgroundDeletion(void*data){
-    while (!kthread_should_stop()) {
-        if (!Frames) {
-            msleep(100);
-            continue;
-        }
-        for (struct Frame *frame = Frames; frame; frame = frame->Previous)
-              if (frame->IsDeleted) {
-                    if(frame==Frames){
-                        Frames=frame->Previous;
-                        if(Frames&&Frames->Next)Frames->Next=NULL;
-                    }else {
-                        if (frame->Previous) 
-                            frame->Previous->Next = frame->Next;
-                        if (frame->Next)
-                            frame->Next->Previous = frame->Previous;
-                    }
-                    kfree(frame);
-                }
-       msleep(10);
-    }
-    return 1;
-}
+
 static inline int CloseFrame(struct Frame*frame) {
     if(!frame)return 0;
-    frame->IsDeleted=1;
+    if(frame==Frames){
+        Frames=frame->Previous;
+        if(Frames&&Frames->Next)Frames->Next=NULL;
+    }else{
+        if (frame->Previous) 
+        frame->Previous->Next = frame->Next;
+        if (frame->Next)
+            frame->Next->Previous = frame->Previous;
+    }
+    kfree(frame);
     return 0;
 }
 static inline int ITakeControl(){
@@ -212,11 +198,7 @@ if (result < 0) {
     return result;
 }
 
-static struct task_struct*BackgroundDeletionThread;
 static int __init wms_init(void){
-
-    BackgroundDeletionThread = kthread_run(BackgroundDeletion, NULL, "BackgroundDeletion");
-  
     IsServerClose = false;
     dev_add_pack(&Gateway);
     return 0;
@@ -226,7 +208,6 @@ static void __exit wms_exit(void){
     dev_remove_pack(&Gateway);
     IsServerClose=true;
     while(Frames)msleep(100); 
-    kthread_stop(BackgroundDeletionThread);
 }
 module_exit(wms_exit);
 MODULE_INFO_SETUP("Pirasath Luxchumykanthan","WeMakeSoftware Kernel Network","1.0");
