@@ -13,7 +13,6 @@ static inline int DropAndCloseFrame(struct Frame*frame);
 static inline struct Frame*CreateFrame(uint8_t id);
 static inline int SetSizeFrame(struct Frame*frame,uint16_t Size);
 static inline int SendFrame(struct Frame*frame);
-
 static inline void ShowTimeByFrame(struct Frame*frame);
 
 
@@ -26,18 +25,66 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
         return 1; 
     }
     frame->IEE802Buffer=skb_mac_header(frame->skb=skb);
-    if(!(frame->IEE802Buffer[0]&3)&&!(frame->IEE802Buffer[6]&3)){
-    
-        ShowTimeByFrame(frame);  
-        return CloseFrame(frame);  
+    //IEEE 802 Unicast and Globel MAC Address
+    if(!(frame->IEE802Buffer[0]&3)&&!(frame->IEE802Buffer[6]&3))
+    //IEEE 802 Ethertype
+    switch (frame->IEE802Buffer[12]<<8|frame->IEE802Buffer[13]){
+        case 2048:if((frame->IEE802Buffer[14]&240)==64&&(frame->IEE802Buffer[14]&15)>4)
+        //RFC 3168 Explicit Congestion Notification
+            switch (frame->IEE802Buffer[15]&3)
+            {
+                case 0:{
+                //RFC 3168 Not-ECT
+                    pr_info("RFC791->RFC3168->Type of Service : Not-ECT");
+                    return CloseFrame(frame);
+                }
+                case 1:{
+                //RFC 3168 ECT(1)
+                    pr_info("RFC791->RFC3168->Type of Service : ECT(1)");
+                    return CloseFrame(frame);
+                }
+                case 2:{
+                //RFC 3168 ECT(0)
+                    pr_info("RFC791->RFC3168->Type of Service : ECT(0)");
+                    return CloseFrame(frame);
+                };    
+                case 3:{
+                //RFC 3168 CE
+                    pr_info("RFC791->RFC3168->Type of Service : CE");
+                    return CloseFrame(frame);
+                } 
+            }else return DropAndCloseFrame(frame);
+        case 34525:if((frame->IEE802Buffer[14]&240)==96)
+        //RFC 3168 Explicit Congestion Notification
+            switch (frame->IEE802Buffer[15]&48)
+            {
+                case 0:{
+                //RFC 3168 Not-ECT
+                    pr_info("RF8200->RFC3168->Traffic Class : Not-ECT"); 
+                    return CloseFrame(frame);
+                }
+                case 16:{
+                //RFC 3168 ECT(1)
+                    pr_info("RFC8200->RFC3168->Traffic Class : ECT(1");
+                    return CloseFrame(frame);
+                }
+                case 32:{
+                //RFC 3168 ECT(0)
+                    pr_info("RFC8200->RFC3168->Traffic Class : ECT(0)");
+                    return CloseFrame(frame);
+                };    
+                case 48:{
+                //RFC 3168 CE
+                    pr_info("RFC8200->RFC3168->Traffic Class : CE");
+                    return CloseFrame(frame);
+                } 
+            }else return DropAndCloseFrame(frame);
     }
-
     return CloseFrame(frame);
 }
 
 static inline void ShowTimeByFrame(struct Frame*frame){
     pr_info("Time (ns): %lld\n", ktime_to_ns(ktime_sub(ktime_get(), frame->Start)));
-
 }
 
 
