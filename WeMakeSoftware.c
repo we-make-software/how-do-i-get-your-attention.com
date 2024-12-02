@@ -53,6 +53,7 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
                             //RFC791->Flags->More Fragments
                             if(frame->IEE802Buffer[20]&32)return DropAndCloseFrame(frame);
                             pr_info("RFC791->Flags->Don't Fragment");
+                            
                             return CloseFrame(frame);
                         }
                         //RFC791->Flags->More Fragments
@@ -112,12 +113,9 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
     }
     return CloseFrame(frame);
 }
-
 static inline void ShowTimeByFrame(struct Frame*frame){
     pr_info("Time (ns): %lld\n", ktime_to_ns(ktime_sub(ktime_get(), frame->Start)));
 }
-
-
 #include<linux/slab.h>
 #include<linux/string.h>
 static void Print(const char *title, const unsigned char *data, int from, int to) {
@@ -156,8 +154,6 @@ static inline bool waitForMemoryIsAvailable(unsigned long memoryRequiredBytes){
 }
 static inline void*waitForMemory(unsigned long memoryRequiredBytes){return waitForMemoryIsAvailable(memoryRequiredBytes)?kmalloc(memoryRequiredBytes,GFP_KERNEL):NULL;}
 static struct packet_type Gateway={.type=htons(ETH_P_ALL),.func=FrameReader,.ignore_outgoing=1};
-
-
 static inline int CloseFrame(struct Frame*frame) {
     if(!frame)return 0;
     if(frame==Frames){
