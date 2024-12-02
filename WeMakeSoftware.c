@@ -32,8 +32,10 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
     //IEEE802->Ethertype
     switch (frame->IEE802Buffer[12]<<8|frame->IEE802Buffer[13]){
         case 2048:
+            //RFC791->Time to Live
+            if(!frame->IEE802Buffer[22]&&
             //RFC791->Flags->Reserved  
-            if(!(frame->IEE802Buffer[20]&128)&&
+            !(frame->IEE802Buffer[20]&128)&&
             //RFC791->Version
             (frame->IEE802Buffer[14]&240)==64&&
             //RFC791->Internet Header Length
@@ -51,9 +53,13 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
                         //RFC791->Flags->Don't Fragment
                         if((frame->IEE802Buffer[20]&64)){
                             //RFC791->Flags->More Fragments
-                            if(frame->IEE802Buffer[20]&32)return DropAndCloseFrame(frame);
+                            if(frame->IEE802Buffer[20]&32||
+                            //RFC791->Fragment Offset  
+                            frame->IEE802Buffer[20]&31||
+                            frame->IEE802Buffer[21]
+                            )return DropAndCloseFrame(frame);
                             pr_info("RFC791->Flags->Don't Fragment");
-                            
+                            Print("   Fragment Offset  ",frame->IEE802Buffer,20,21);
                             return CloseFrame(frame);
                         }
                         //RFC791->Flags->More Fragments
