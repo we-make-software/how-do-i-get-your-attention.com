@@ -16,8 +16,7 @@ static inline int SendFrame(struct Frame*frame);
 static inline void ShowTimeByFrame(struct Frame*frame);
 static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_type*pt,struct net_device*orig_dev){
     struct Frame*frame;
-    if (IsServerClose||!skb||skb->len<42||dev->name[0]!=101||dev->name[1]!=116||dev->name[2]!=104||!(frame=CreateFrame(dev->ifindex)))
-         return NET_RX_SUCCESS; 
+    if(IsServerClose||!skb||skb->len<42||dev->name[0]!=101||dev->name[1]!=116||dev->name[2]!=104||!(frame=CreateFrame(dev->ifindex)))return NET_RX_SUCCESS; 
     frame->IEE802Buffer=skb_mac_header(frame->skb=skb);
     //IEEE802->Destination 
     if(!(frame->IEE802Buffer[0]&3)&&
@@ -121,8 +120,11 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
                     return CloseFrame(frame);
                 } 
             }else return DropAndCloseFrame(frame);
+        default:{
+            Print("IEEE802->Ethertype",frame->IEE802Buffer,12,13);
+            return CloseFrame(frame);
+        }
     }
-    Print("IEEE802->Ethertype",frame->IEE802Buffer,12,13);
     return CloseFrame(frame);
 }
 static inline void ShowTimeByFrame(struct Frame*frame){
@@ -184,12 +186,12 @@ static inline int ITakeControl(){
    return NET_RX_DROP;
 }
 static inline int DropFrame(struct Frame*frame){
-    if(frame)kfree(frame->skb);
+    if(frame&&frame->skb)kfree_skb(frame->skb);
     return ITakeControl();
 }
 static inline int DropAndCloseFrame(struct Frame*frame){
     if(frame){
-        kfree(frame->skb);
+        DropFrame(frame);
         CloseFrame(frame);
     }
     return NET_RX_DROP;
