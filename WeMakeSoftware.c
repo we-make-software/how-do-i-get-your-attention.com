@@ -86,25 +86,25 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
             //RF8200->RFC3168->Traffic Class->Explicit Congestion Notification
             switch (frame->IEE802Buffer[15]&48)
             {
+                //RF8200->RFC3168->Traffic Class->Explicit Congestion Notification : Not-ECT
                 case 0:{
                     //RF8200->RFC9435->Traffic Class->Differentiated Services Code Point
                     if((frame->IEE802Buffer[14]&15)||(frame->IEE802Buffer[15]&192))return DropAndCloseFrame(frame);
-                    //RF8200->RFC3168->Traffic Class->Explicit Congestion Notification : Not-ECT
                     pr_info("RF8200->RFC3168->Traffic Class->Explicit Congestion Notification : Not-ECT"); 
                     return CloseFrame(frame);
                 }
+                //RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : ECT(1)
                 case 16:{
-                    //RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : ECT(1)
                     pr_info("RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : ECT(1)");
                     return CloseFrame(frame);
                 }
+                //RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : ECT(0)
                 case 32:{
-                    //RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : ECT(0)
                     pr_info("RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : ECT(0)");
                     return CloseFrame(frame);
-                };    
+                }; 
+                //RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : CE  
                 case 48:{
-                    //RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : CE
                     pr_info("RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : CE");
                     return CloseFrame(frame);
                 } 
