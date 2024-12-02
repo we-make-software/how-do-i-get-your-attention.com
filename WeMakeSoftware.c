@@ -14,16 +14,10 @@ static inline struct Frame*CreateFrame(uint8_t id);
 static inline int SetSizeFrame(struct Frame*frame,uint16_t Size);
 static inline int SendFrame(struct Frame*frame);
 static inline void ShowTimeByFrame(struct Frame*frame);
-
-
-
-
 static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_type*pt,struct net_device*orig_dev){
     struct Frame*frame;
-    if (IsServerClose||skb->len<42||dev->name[0]!=101||dev->name[1]!=116||dev->name[2]!=104||!(frame=CreateFrame(dev->ifindex))){
-        kfree_skb(skb); 
-        return 1; 
-    }
+    if (IsServerClose||!skb||skb->len<42||dev->name[0]!=101||dev->name[1]!=116||dev->name[2]!=104||!(frame=CreateFrame(dev->ifindex)))
+         return NET_RX_SUCCESS; 
     frame->IEE802Buffer=skb_mac_header(frame->skb=skb);
     //IEEE802->Destination 
     if(!(frame->IEE802Buffer[0]&3)&&
@@ -31,9 +25,10 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
     !(frame->IEE802Buffer[6]&3))
     //IEEE802->Ethertype
     switch (frame->IEE802Buffer[12]<<8|frame->IEE802Buffer[13]){
+        //RFC791
         case 2048:
             //RFC791->Time to Live
-            if(!frame->IEE802Buffer[22]&&
+            if((frame->IEE802Buffer[22])&&
             //RFC791->Flags->Reserved  
             !(frame->IEE802Buffer[20]&128)&&
             //RFC791->Version
@@ -58,9 +53,18 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
                             frame->IEE802Buffer[20]&31||
                             frame->IEE802Buffer[21]
                             )return DropAndCloseFrame(frame);
-                            pr_info("RFC791->Flags->Don't Fragment");
-                            Print("   Fragment Offset  ",frame->IEE802Buffer,20,21);
-                            return CloseFrame(frame);
+                            switch (frame->IEE802Buffer[22])
+                            {
+                                //RFC791->Protocol->RFC3208
+                                case 113:{
+                                    pr_info("RFC791->Protocol->RFC3208");     
+                                    return CloseFrame(frame);
+                                }
+                                default:{
+                                    Print("RFC791->Flags->Don't Fragment->Protocol",frame->IEE802Buffer,22,22);
+                                    return CloseFrame(frame);
+                                }
+                            }
                         }
                         //RFC791->Flags->More Fragments
                         if(frame->IEE802Buffer[20]&32){
@@ -87,6 +91,7 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
                     return CloseFrame(frame);
                 } 
             }else return DropAndCloseFrame(frame);
+        //RF8200    
         case 34525:
             //RF8200->Version
             if((frame->IEE802Buffer[14]&240)==96)
@@ -117,6 +122,7 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
                 } 
             }else return DropAndCloseFrame(frame);
     }
+    Print("IEEE802->Ethertype",frame->IEE802Buffer,12,13);
     return CloseFrame(frame);
 }
 static inline void ShowTimeByFrame(struct Frame*frame){
