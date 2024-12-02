@@ -25,16 +25,15 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
         return 1; 
     }
     frame->IEE802Buffer=skb_mac_header(frame->skb=skb);
-    //IEEE 802->Destination 
+    //IEEE802->Destination 
     if(!(frame->IEE802Buffer[0]&3)&&
-    //IEEE 802->Source 
+    //IEEE802->Source 
     !(frame->IEE802Buffer[6]&3))
-    //IEEE 802->Ethertype
+    //IEEE802->Ethertype
     switch (frame->IEE802Buffer[12]<<8|frame->IEE802Buffer[13]){
         case 2048:
-            if(
-            //RFC791->Flags->Reserved   
-            !(frame->IEE802Buffer[20]&128)    
+            //RFC791->Flags->Reserved  
+            if(!(frame->IEE802Buffer[20]&128)&&
             //RFC791->Version
             (frame->IEE802Buffer[14]&240)==64&&
             //RFC791->Internet Header Length
@@ -47,32 +46,37 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
             {
                 //RFC791->RFC3168->Type of Service->Explicit Congestion Notification : Not-ECT
                 case 0:
-                    //RFC791->RFC3168->Type of Service->Differentiated Services Code Point 
+                    //RFC791->RFC3168->Type of Service->Differentiated Services Code Point
                     if(!(frame->IEE802Buffer[15]&252)){
                         //RFC791->Flags->Don't Fragment
                         if((frame->IEE802Buffer[20]&64)){
                             //RFC791->Flags->More Fragments
                             if(frame->IEE802Buffer[20]&32)return DropAndCloseFrame(frame);
-                            pr_info("RFC791->Flags->More Fragments");
-                            return CloseFrame(frame); 
-                        }else{
-                            pr_info("RFC791->RFC3168->Flags : May Fragment");
-                            return CloseFrame(frame); 
+                            pr_info("RFC791->Flags->Don't Fragment");
+                            return CloseFrame(frame);
                         }
+                        //RFC791->Flags->More Fragments
+                        if(frame->IEE802Buffer[20]&32){
+                            pr_info("RFC791->Flags->More Fragments");
+                            return CloseFrame(frame);
+                        }
+                        //RFC791->Flags->Last Fragment
+                        pr_info("RFC791->Flags->Last Fragment");
+                        return CloseFrame(frame); 
                     }else return DropAndCloseFrame(frame);
+                 //RFC791->RFC3168->Type of Service->Explicit Congestion Notification : ECT(1)
                 case 1:{
-                    //RFC791->RFC3168->Type of Service->Explicit Congestion Notification  : ECT(1)
-                    pr_info("RFC791->RFC3168->Type of Service : ECT(1)");
+                    pr_info("RFC791->RFC3168->Type of Service->Explicit Congestion Notification : ECT(1)");
                     return CloseFrame(frame);
                 }
+                //RFC791->RFC3168->Type of Service->Explicit Congestion Notification : ECT(0) 
                 case 2:{
-                    //RFC791->RFC3168->Type of Service->Explicit Congestion Notification  : ECT(0)
-                    pr_info("RFC791->RFC3168->Type of Service : ECT(0)");
+                    pr_info("RFC791->RFC3168->Type of Service->Explicit Congestion Notification : ECT(0)");
                     return CloseFrame(frame);
-                };    
+                };  
+                //RFC791->RFC3168->Type of Service->Explicit Congestion Notification : CE
                 case 3:{
-                    //RFC791->RFC3168->Type of Service->Explicit Congestion Notification  : CE
-                    pr_info("RFC791->RFC3168->Type of Service : CE");
+                    pr_info("RFC791->RFC3168->Type of Service->Explicit Congestion Notification : CE");
                     return CloseFrame(frame);
                 } 
             }else return DropAndCloseFrame(frame);
@@ -86,22 +90,22 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
                     //RF8200->RFC9435->Traffic Class->Differentiated Services Code Point
                     if((frame->IEE802Buffer[14]&15)||(frame->IEE802Buffer[15]&192))return DropAndCloseFrame(frame);
                     //RF8200->RFC3168->Traffic Class->Explicit Congestion Notification : Not-ECT
-                    pr_info("RF8200->RFC3168->Traffic Class : Not-ECT"); 
+                    pr_info("RF8200->RFC3168->Traffic Class->Explicit Congestion Notification : Not-ECT"); 
                     return CloseFrame(frame);
                 }
                 case 16:{
                     //RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : ECT(1)
-                    pr_info("RFC8200->RFC3168->Traffic Class : ECT(1)");
+                    pr_info("RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : ECT(1)");
                     return CloseFrame(frame);
                 }
                 case 32:{
                     //RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : ECT(0)
-                    pr_info("RFC8200->RFC3168->Traffic Class : ECT(0)");
+                    pr_info("RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : ECT(0)");
                     return CloseFrame(frame);
                 };    
                 case 48:{
                     //RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : CE
-                    pr_info("RFC8200->RFC3168->Traffic Class : CE");
+                    pr_info("RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : CE");
                     return CloseFrame(frame);
                 } 
             }else return DropAndCloseFrame(frame);
