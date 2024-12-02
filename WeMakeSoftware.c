@@ -25,56 +25,82 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
         return 1; 
     }
     frame->IEE802Buffer=skb_mac_header(frame->skb=skb);
-    //IEEE 802 Unicast and Globel MAC Address
-    if(!(frame->IEE802Buffer[0]&3)&&!(frame->IEE802Buffer[6]&3))
-    //IEEE 802 Ethertype
+    //IEEE 802->Destination 
+    if(!(frame->IEE802Buffer[0]&3)&&
+    //IEEE 802->Source 
+    !(frame->IEE802Buffer[6]&3))
+    //IEEE 802->Ethertype
     switch (frame->IEE802Buffer[12]<<8|frame->IEE802Buffer[13]){
-        case 2048:if((frame->IEE802Buffer[14]&240)==64&&(frame->IEE802Buffer[14]&15)>4)
-        //RFC 3168 Explicit Congestion Notification
-            switch (frame->IEE802Buffer[15]&3)
+        case 2048:
+            if(
+            //RFC791->Flags->Reserved   
+            !(frame->IEE802Buffer[20]&128)    
+            //RFC791->Version
+            (frame->IEE802Buffer[14]&240)==64&&
+            //RFC791->Internet Header Length
+            (frame->IEE802Buffer[14]&15)>4&&
+            ((frame->IEE802Buffer[14]&15)*4)<=
+            //RFC791->Total Length
+            (frame->IEE802Buffer[16]<<8|frame->IEE802Buffer[17]))
+            //RFC791->RFC3168->Type of Service->Explicit Congestion Notification
+            switch(frame->IEE802Buffer[15]&3)
             {
-                case 0:{
-                //RFC 3168 Not-ECT
-                    pr_info("RFC791->RFC3168->Type of Service : Not-ECT");
-                    return CloseFrame(frame);
-                }
+                //RFC791->RFC3168->Type of Service->Explicit Congestion Notification : Not-ECT
+                case 0:
+                    //RFC791->RFC3168->Type of Service->Differentiated Services Code Point 
+                    if(!(frame->IEE802Buffer[15]&252)){
+                        //RFC791->Flags->Don't Fragment
+                        if((frame->IEE802Buffer[20]&64)){
+                            //RFC791->Flags->More Fragments
+                            if(frame->IEE802Buffer[20]&32)return DropAndCloseFrame(frame);
+                            pr_info("RFC791->Flags->More Fragments");
+                            return CloseFrame(frame); 
+                        }else{
+                            pr_info("RFC791->RFC3168->Flags : May Fragment");
+                            return CloseFrame(frame); 
+                        }
+                    }else return DropAndCloseFrame(frame);
                 case 1:{
-                //RFC 3168 ECT(1)
+                    //RFC791->RFC3168->Type of Service->Explicit Congestion Notification  : ECT(1)
                     pr_info("RFC791->RFC3168->Type of Service : ECT(1)");
                     return CloseFrame(frame);
                 }
                 case 2:{
-                //RFC 3168 ECT(0)
+                    //RFC791->RFC3168->Type of Service->Explicit Congestion Notification  : ECT(0)
                     pr_info("RFC791->RFC3168->Type of Service : ECT(0)");
                     return CloseFrame(frame);
                 };    
                 case 3:{
-                //RFC 3168 CE
+                    //RFC791->RFC3168->Type of Service->Explicit Congestion Notification  : CE
                     pr_info("RFC791->RFC3168->Type of Service : CE");
                     return CloseFrame(frame);
                 } 
             }else return DropAndCloseFrame(frame);
-        case 34525:if((frame->IEE802Buffer[14]&240)==96)
-        //RFC 3168 Explicit Congestion Notification
+        case 34525:
+            //RF8200->Version
+            if((frame->IEE802Buffer[14]&240)==96)
+            //RF8200->RFC3168->Traffic Class->Explicit Congestion Notification
             switch (frame->IEE802Buffer[15]&48)
             {
                 case 0:{
-                //RFC 3168 Not-ECT
+                    //RF8200->RFC9435->Traffic Class->Differentiated Services Code Point
+                    if((frame->IEE802Buffer[14]&15)||(frame->IEE802Buffer[15]&192))return DropAndCloseFrame(frame);
+                    //RF8200->RFC3168->Traffic Class->Explicit Congestion Notification : Not-ECT
                     pr_info("RF8200->RFC3168->Traffic Class : Not-ECT"); 
                     return CloseFrame(frame);
                 }
                 case 16:{
-                //RFC 3168 ECT(1)
-                    pr_info("RFC8200->RFC3168->Traffic Class : ECT(1");
+                    //RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : ECT(1)
+                    pr_info("RFC8200->RFC3168->Traffic Class : ECT(1)");
                     return CloseFrame(frame);
                 }
                 case 32:{
-                //RFC 3168 ECT(0)
+                    //RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : ECT(0)
                     pr_info("RFC8200->RFC3168->Traffic Class : ECT(0)");
                     return CloseFrame(frame);
                 };    
                 case 48:{
-                //RFC 3168 CE
+                    //RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : CE
                     pr_info("RFC8200->RFC3168->Traffic Class : CE");
                     return CloseFrame(frame);
                 } 
