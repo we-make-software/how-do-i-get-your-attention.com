@@ -43,7 +43,7 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
             frame->IEE802Buffer[30]==224||
             frame->IEE802Buffer[30]==240) return CloseFrame(frame);
             //RFC791->Time to Live
-            if((frame->IEE802Buffer[22])&&
+            else if((frame->IEE802Buffer[22])&&
             //RFC791->Flags->Reserved  
             !(frame->IEE802Buffer[20]&128)&&
             //RFC791->Version
@@ -73,7 +73,7 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
                                 //RFC791->Protocol->RFC3208
                                 case 113:{
                                     pr_info("RFC791->Protocol->RFC3208");     
-                                ShowTimeByFrame(frame);
+                                    ShowTimeByFrame(frame);
                                     return CloseFrame(frame);
                                 }
                                 default:{
