@@ -14,6 +14,9 @@ static inline struct Frame*CreateFrame(uint8_t id);
 static inline int SetSizeFrame(struct Frame*frame,uint16_t Size);
 static inline int SendFrame(struct Frame*frame);
 static inline void ShowTimeByFrame(struct Frame*frame);
+
+
+static inline int HeaderChecksumReader(struct Frame*frame);
 static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_type*pt,struct net_device*orig_dev){
     struct Frame*frame;
     if(IsServerClose||!skb||skb->len<42||dev->name[0]!=101||dev->name[1]!=116||dev->name[2]!=104||!(frame=CreateFrame(dev->ifindex)))return NET_RX_SUCCESS; 
@@ -52,7 +55,9 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
             (frame->IEE802Buffer[14]&15)>4&&
             ((frame->IEE802Buffer[14]&15)*4)<=
             //RFC791->Total Length
-            (frame->IEE802Buffer[16]<<8|frame->IEE802Buffer[17]))
+            (frame->IEE802Buffer[16]<<8|frame->IEE802Buffer[17])
+            //RFC791->Header Checksum
+            &&HeaderChecksumReader(frame))
             //RFC791->RFC3168->Type of Service->Explicit Congestion Notification
             switch(frame->IEE802Buffer[15]&3)
             {
@@ -70,14 +75,128 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
                             )return DropAndCloseFrame(frame);
                             switch(frame->IEE802Buffer[22])
                             {
+                                //RFC791->Protocol->?
+                                case 41:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 42:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 43:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 44:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 45:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 47:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 48:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 49:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 50:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 51:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 52:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 55:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 54:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 61:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 105:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 106:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 107:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 110:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 108:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 111:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 112:{
+                                    return CloseFrame(frame);
+                                }
                                 //RFC791->Protocol->RFC3208
                                 case 113:{
-                                    pr_info("RFC791->Protocol->RFC3208");     
-                                    ShowTimeByFrame(frame);
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 114:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 116:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 117:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 118:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 120:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 121:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 122:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 245:{
                                     return CloseFrame(frame);
                                 }
                                 default:{
-                                    Print("RFC791->Flags->Don't Fragment->Protocol",frame->IEE802Buffer,22,22);
+                                    Print("unknown RFC791->Protocol",frame->IEE802Buffer,22,22);
                                     return CloseFrame(frame);
                                 }
                             }
@@ -158,9 +277,21 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
     }
     return CloseFrame(frame);
 }
+
 static inline void ShowTimeByFrame(struct Frame*frame){
     pr_info("Time (ns): %lld\n", ktime_to_ns(ktime_sub(ktime_get(), frame->Start)));
 }
+
+static inline int HeaderChecksumReader(struct Frame*frame){
+    const unsigned char*header=frame->IEE802Buffer+14; 
+    int len=(header[0]&15)*4; 
+    unsigned int sum=0;
+    for(int i=0;i<len;i+=2)if(i!=10)sum+=(header[i]<< 8)|header[i+1];
+    while(sum>>16)sum=(sum&65535)+(sum>>16);
+    return(~sum & 65535)==((header[10]<<8)|header[11]) ;
+}
+
+
 #include<linux/slab.h>
 #include<linux/string.h>
 static void Print(const char *title, const unsigned char *data, int from, int to) {
