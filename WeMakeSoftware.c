@@ -76,6 +76,30 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
                             switch(frame->IEE802Buffer[22])
                             {
                                 //RFC791->Protocol->?
+                                case 32:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 34:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 36:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 38:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 39:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 40:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
                                 case 41:{
                                     return CloseFrame(frame);
                                 }
@@ -93,6 +117,10 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
                                 }
                                 //RFC791->Protocol->?
                                 case 45:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 46:{
                                     return CloseFrame(frame);
                                 }
                                 //RFC791->Protocol->?
@@ -120,11 +148,27 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
                                     return CloseFrame(frame);
                                 }
                                 //RFC791->Protocol->?
-                                case 55:{
+                                case 53:{
                                     return CloseFrame(frame);
                                 }
                                 //RFC791->Protocol->?
                                 case 54:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 55:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 56:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 57:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 58:{
                                     return CloseFrame(frame);
                                 }
                                 //RFC791->Protocol->?
@@ -152,6 +196,10 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
                                     return CloseFrame(frame);
                                 }
                                 //RFC791->Protocol->?
+                                case 109:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
                                 case 111:{
                                     return CloseFrame(frame);
                                 }
@@ -165,6 +213,10 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
                                 }
                                 //RFC791->Protocol->?
                                 case 114:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->?
+                                case 115:{
                                     return CloseFrame(frame);
                                 }
                                 //RFC791->Protocol->?
@@ -189,6 +241,9 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
                                 }
                                 //RFC791->Protocol->?
                                 case 122:{
+                                    return CloseFrame(frame);
+                                }
+                                case 233:{
                                     return CloseFrame(frame);
                                 }
                                 //RFC791->Protocol->?
