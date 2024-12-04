@@ -73,9 +73,22 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
                             frame->IEE802Buffer[20]&31||
                             frame->IEE802Buffer[21]
                             )return DropAndCloseFrame(frame);
+                            //RFC791->Protocol
                             switch(frame->IEE802Buffer[23])
                             {
-                            
+                                //RFC791->Protocol->RFC792
+                                case 1:{
+                                    return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->RFC9293
+                                case 6:{
+
+                                   return CloseFrame(frame);
+                                }
+                                //RFC791->Protocol->RFC768
+                                case 17:{
+                                    return CloseFrame(frame);
+                                }
                                 default:{
                                     Print("unknown RFC791->Protocol",frame->IEE802Buffer,23,23);
                                     return CloseFrame(frame);
@@ -110,19 +123,22 @@ static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_ty
         //RF8200    
         case 34525:
             //RF8200->Source Address
-            if((frame->IEE802Buffer[22]==254&&frame->IEE802Buffer[23]>=128&&frame->IEE802Buffer[23]<=191)||
+            if(!((frame->IEE802Buffer[22]&224)==32||(frame->IEE802Buffer[38]&224)==32)&&
+            ((frame->IEE802Buffer[22]==254&&frame->IEE802Buffer[23]>=128&&frame->IEE802Buffer[23]<=191)||
             frame->IEE802Buffer[22]==255||
             (frame->IEE802Buffer[22]>=252&&frame->IEE802Buffer[22]<=253)||
-            (frame->IEE802Buffer[22]==0&&frame->IEE802Buffer[23]==0&&frame->IEE802Buffer[24]==0&&frame->IEE802Buffer[25]==0&&
-            frame->IEE802Buffer[26]==0&&frame->IEE802Buffer[27]==0&&frame->IEE802Buffer[28]==0&&frame->IEE802Buffer[29]==0&&
-            frame->IEE802Buffer[30]==0&&frame->IEE802Buffer[31]==1)||
+            (frame->IEE802Buffer[22]==0&&frame->IEE802Buffer[23]==0&&frame->IEE802Buffer[24]==0&&
+            frame->IEE802Buffer[25]==0&&frame->IEE802Buffer[26]==0&&frame->IEE802Buffer[27]==0&&
+            frame->IEE802Buffer[28]==0&&frame->IEE802Buffer[29]==0&&frame->IEE802Buffer[30]==0&&
+            frame->IEE802Buffer[31]==1)||
             //RFC791->Destination Address
             (frame->IEE802Buffer[38]==254&&frame->IEE802Buffer[39]>=128&&frame->IEE802Buffer[39]<=191)||
             frame->IEE802Buffer[38]==255||
             (frame->IEE802Buffer[38]>=252&&frame->IEE802Buffer[38]<=253)||
-            (frame->IEE802Buffer[38]==0&&frame->IEE802Buffer[39]==0&&frame->IEE802Buffer[40]==0&&frame->IEE802Buffer[41]==0&&
-            frame->IEE802Buffer[42]==0&&frame->IEE802Buffer[43]==0&&frame->IEE802Buffer[44]==0&&frame->IEE802Buffer[45]==0&&
-            frame->IEE802Buffer[46]==0&&frame->IEE802Buffer[47]==1))return CloseFrame(frame);
+            (frame->IEE802Buffer[38]==0&&frame->IEE802Buffer[39]==0&&frame->IEE802Buffer[40]==0&&
+            frame->IEE802Buffer[41]==0&&frame->IEE802Buffer[42]==0&&frame->IEE802Buffer[43]==0&&
+            frame->IEE802Buffer[44]==0&&frame->IEE802Buffer[45]==0&&frame->IEE802Buffer[46]==0&&
+            frame->IEE802Buffer[47]==1)))return CloseFrame(frame);
             //RF8200->Version
             else if((frame->IEE802Buffer[14]&240)==96)
             //RF8200->RFC3168->Traffic Class->Explicit Congestion Notification
