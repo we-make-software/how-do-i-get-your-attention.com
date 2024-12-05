@@ -14,172 +14,13 @@ static inline struct Frame*CreateFrame(uint8_t id);
 static inline int SetSizeFrame(struct Frame*frame,uint16_t Size);
 static inline int SendFrame(struct Frame*frame);
 static inline void ShowTimeByFrame(struct Frame*frame);
+static inline int IsRFC8200(struct Frame*frame);
 
 
-static inline int HeaderChecksumReader(struct Frame*frame);
-static int FrameReader(struct sk_buff*skb,struct net_device*dev,struct packet_type*pt,struct net_device*orig_dev){
-    struct Frame*frame;
-    if(IsServerClose||!skb||skb->len<42||dev->name[0]!=101||dev->name[1]!=116||dev->name[2]!=104||!(frame=CreateFrame(dev->ifindex)))return NET_RX_SUCCESS; 
-    frame->IEE802Buffer=skb_mac_header(frame->skb=skb);
-    //IEEE802->Destination 
-    if(!(frame->IEE802Buffer[0]&3)&&
-    //IEEE802->Source 
-    !(frame->IEE802Buffer[6]&3))
-    //IEEE802->Ethertype
-    switch (frame->IEE802Buffer[12]<<8|frame->IEE802Buffer[13]){
-        //RFC791
-        case 2048:
-            //RFC791->Source Address
-            if(frame->IEE802Buffer[26]==10|| 
-            (frame->IEE802Buffer[26]==192&&frame->IEE802Buffer[27]==168)|| 
-            (frame->IEE802Buffer[26]==176&&frame->IEE802Buffer[27]==16)|| 
-            frame->IEE802Buffer[26]==127||
-            (frame->IEE802Buffer[26]==169&&frame->IEE802Buffer[27]==254)|| 
-            frame->IEE802Buffer[26]==224||
-            frame->IEE802Buffer[26]==240||
-            //RFC791->Destination Address
-            frame->IEE802Buffer[30]==10|| 
-            (frame->IEE802Buffer[30]==192&&frame->IEE802Buffer[31]==168)|| 
-            (frame->IEE802Buffer[30]==176&&frame->IEE802Buffer[31]==16)||
-            frame->IEE802Buffer[30]==127||
-            (frame->IEE802Buffer[30]==169&&frame->IEE802Buffer[31]==254)|| 
-            frame->IEE802Buffer[30]==224||
-            frame->IEE802Buffer[30]==240) return CloseFrame(frame);
-            //RFC791->Time to Live
-            else if((frame->IEE802Buffer[22])&&
-            //RFC791->Flags->Reserved  
-            !(frame->IEE802Buffer[20]&128)&&
-            //RFC791->Version
-            (frame->IEE802Buffer[14]&240)==64&&
-            //RFC791->Internet Header Length
-            (frame->IEE802Buffer[14]&15)>4&&
-            ((frame->IEE802Buffer[14]&15)*4)<=
-            //RFC791->Total Length
-            (frame->IEE802Buffer[16]<<8|frame->IEE802Buffer[17])
-            //RFC791->Header Checksum
-            &&HeaderChecksumReader(frame))
-            //RFC791->RFC3168->Type of Service->Explicit Congestion Notification
-            switch(frame->IEE802Buffer[15]&3)
-            {
-                //RFC791->RFC3168->Type of Service->Explicit Congestion Notification : Not-ECT
-                case 0:
-                    //RFC791->RFC3168->Type of Service->Differentiated Services Code Point
-                    if(!(frame->IEE802Buffer[15]&252)){
-                        //RFC791->Flags->Don't Fragment
-                        if((frame->IEE802Buffer[20]&64)){
-                            //RFC791->Flags->More Fragments
-                            if(frame->IEE802Buffer[20]&32||
-                            //RFC791->Fragment Offset  
-                            frame->IEE802Buffer[20]&31||
-                            frame->IEE802Buffer[21]
-                            )return DropAndCloseFrame(frame);
-                            //RFC791->Protocol
-                            switch(frame->IEE802Buffer[23])
-                            {
-                                //RFC791->Protocol->RFC792
-                                case 1:{
-                                    return CloseFrame(frame);
-                                }
-                                //RFC791->Protocol->RFC9293
-                                case 6:{
-
-                                   return CloseFrame(frame);
-                                }
-                                //RFC791->Protocol->RFC768
-                                case 17:{
-                                    return CloseFrame(frame);
-                                }
-                                default:{
-                                    Print("unknown RFC791->Protocol",frame->IEE802Buffer,23,23);
-                                    return CloseFrame(frame);
-                                }
-                            }
-                        }
-                        //RFC791->Flags->More Fragments
-                        if(frame->IEE802Buffer[20]&32){
-                            pr_info("RFC791->Flags->More Fragments");
-                            return CloseFrame(frame);
-                        }
-                        //RFC791->Flags->Last Fragment
-                        pr_info("RFC791->Flags->Last Fragment");
-                        return CloseFrame(frame); 
-                    }else return DropAndCloseFrame(frame);
-                 //RFC791->RFC3168->Type of Service->Explicit Congestion Notification : ECT(1)
-                case 1:{
-                    pr_info("RFC791->RFC3168->Type of Service->Explicit Congestion Notification : ECT(1)");
-                    return CloseFrame(frame);
-                }
-                //RFC791->RFC3168->Type of Service->Explicit Congestion Notification : ECT(0) 
-                case 2:{
-                    pr_info("RFC791->RFC3168->Type of Service->Explicit Congestion Notification : ECT(0)");
-                    return CloseFrame(frame);
-                };  
-                //RFC791->RFC3168->Type of Service->Explicit Congestion Notification : CE
-                case 3:{
-                    pr_info("RFC791->RFC3168->Type of Service->Explicit Congestion Notification : CE");
-                    return CloseFrame(frame);
-                } 
-            }else return DropAndCloseFrame(frame);
-        //RF8200    
-        case 34525:
-            //RF8200->Source Address
-            if(!((frame->IEE802Buffer[22]&224)==32||(frame->IEE802Buffer[38]&224)==32)&&
-            ((frame->IEE802Buffer[22]==254&&frame->IEE802Buffer[23]>=128&&frame->IEE802Buffer[23]<=191)||
-            frame->IEE802Buffer[22]==255||
-            (frame->IEE802Buffer[22]>=252&&frame->IEE802Buffer[22]<=253)||
-            (frame->IEE802Buffer[22]==0&&frame->IEE802Buffer[23]==0&&frame->IEE802Buffer[24]==0&&
-            frame->IEE802Buffer[25]==0&&frame->IEE802Buffer[26]==0&&frame->IEE802Buffer[27]==0&&
-            frame->IEE802Buffer[28]==0&&frame->IEE802Buffer[29]==0&&frame->IEE802Buffer[30]==0&&
-            frame->IEE802Buffer[31]==1)||
-            //RFC791->Destination Address
-            (frame->IEE802Buffer[38]==254&&frame->IEE802Buffer[39]>=128&&frame->IEE802Buffer[39]<=191)||
-            frame->IEE802Buffer[38]==255||
-            (frame->IEE802Buffer[38]>=252&&frame->IEE802Buffer[38]<=253)||
-            (frame->IEE802Buffer[38]==0&&frame->IEE802Buffer[39]==0&&frame->IEE802Buffer[40]==0&&
-            frame->IEE802Buffer[41]==0&&frame->IEE802Buffer[42]==0&&frame->IEE802Buffer[43]==0&&
-            frame->IEE802Buffer[44]==0&&frame->IEE802Buffer[45]==0&&frame->IEE802Buffer[46]==0&&
-            frame->IEE802Buffer[47]==1)))return CloseFrame(frame);
-            //RF8200->Version
-            else if((frame->IEE802Buffer[14]&240)==96)
-            //RF8200->RFC3168->Traffic Class->Explicit Congestion Notification
-            switch (frame->IEE802Buffer[15]&48)
-            {
-                //RF8200->RFC3168->Traffic Class->Explicit Congestion Notification : Not-ECT
-                case 0:{
-                    //RF8200->RFC9435->Traffic Class->Differentiated Services Code Point
-                    if((frame->IEE802Buffer[14]&15)||(frame->IEE802Buffer[15]&192))return DropAndCloseFrame(frame);
-                    pr_info("RF8200->RFC3168->Traffic Class->Explicit Congestion Notification : Not-ECT"); 
-                    return CloseFrame(frame);
-                }
-                //RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : ECT(1)
-                case 16:{
-                    pr_info("RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : ECT(1)");
-                    return CloseFrame(frame);
-                }
-                //RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : ECT(0)
-                case 32:{
-                    pr_info("RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : ECT(0)");
-                    return CloseFrame(frame);
-                }; 
-                //RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : CE  
-                case 48:{
-                    pr_info("RFC8200->RFC3168->Traffic Class->Explicit Congestion Notification : CE");
-                    return CloseFrame(frame);
-                } 
-            }else return DropAndCloseFrame(frame);
-        default:{
-            Print("IEEE802->Ethertype",frame->IEE802Buffer,12,13);
-            return CloseFrame(frame);
-        }
-    }
-    return CloseFrame(frame);
+static inline int IsRFC8200(struct Frame*frame){
+    return (frame->IEE802Buffer[14]&240)==96;
 }
-
-static inline void ShowTimeByFrame(struct Frame*frame){
-    pr_info("Time (ns): %lld\n", ktime_to_ns(ktime_sub(ktime_get(), frame->Start)));
-}
-
-static inline int HeaderChecksumReader(struct Frame*frame){
+static inline int ValidRFC791SHeaderCheckSum(struct Frame*frame){
     const unsigned char*header=frame->IEE802Buffer+14; 
     int len=(header[0]&15)*4; 
     unsigned int sum=0;
@@ -188,7 +29,70 @@ static inline int HeaderChecksumReader(struct Frame*frame){
     return(~sum & 65535)==((header[10]<<8)|header[11]) ;
 }
 
+static int ValidRFC791SourceAddress(struct Frame* frame){
+  unsigned char Octet0=frame->IEE802Buffer[26],Octet1=frame->IEE802Buffer[27];
+  return Octet0==10||(Octet0==192&&Octet1==168)||(Octet0==176&&Octet1==16)||Octet0==127||(Octet0==169&&Octet1==254)||Octet0==224||Octet0==240;
+}
 
+static int VersionReader(struct sk_buff*skb,struct net_device*dev,struct packet_type*pt,struct net_device*orig_dev){
+    struct Frame*frame;
+    if(IsServerClose||!skb||skb->len<42||dev->name[0]!=101||dev->name[1]!=116||dev->name[2]!=104||!(frame=CreateFrame(dev->ifindex)))return NET_RX_SUCCESS; 
+    frame->IEE802Buffer=skb_mac_header(frame->skb=skb);
+    if(!(frame->IEE802Buffer[0]&3)&&
+    !(frame->IEE802Buffer[6]&3))
+    switch (frame->IEE802Buffer[12]<<8|frame->IEE802Buffer[13]){
+        case 2048:
+            if(ValidRFC791SourceAddress(frame)||
+            frame->IEE802Buffer[30]==10|| 
+            (frame->IEE802Buffer[30]==192&&frame->IEE802Buffer[31]==168)|| 
+            (frame->IEE802Buffer[30]==176&&frame->IEE802Buffer[31]==16)||
+            frame->IEE802Buffer[30]==127||
+            (frame->IEE802Buffer[30]==169&&frame->IEE802Buffer[31]==254)|| 
+            frame->IEE802Buffer[30]==224||
+            frame->IEE802Buffer[30]==240) return CloseFrame(frame);
+            else if((frame->IEE802Buffer[22])&&
+            !(frame->IEE802Buffer[20]&128)&&
+            (frame->IEE802Buffer[14]&240)==64&&
+            (frame->IEE802Buffer[14]&15)>4&&
+            ((frame->IEE802Buffer[14]&15)*4)<=
+            (frame->IEE802Buffer[16]<<8|frame->IEE802Buffer[17])
+            &&ValidRFC791SHeaderCheckSum(frame)){
+                ShowTimeByFrame(frame);
+                return CloseFrame(frame);
+            }
+            else return DropAndCloseFrame(frame);
+        case 34525:
+            if(!((frame->IEE802Buffer[22]&224)==32||(frame->IEE802Buffer[38]&224)==32)&&
+            ((frame->IEE802Buffer[22]==254&&frame->IEE802Buffer[23]>=128&&frame->IEE802Buffer[23]<=191)||
+            frame->IEE802Buffer[22]==255||
+            (frame->IEE802Buffer[22]>=252&&frame->IEE802Buffer[22]<=253)||
+            (frame->IEE802Buffer[22]==0&&frame->IEE802Buffer[23]==0&&frame->IEE802Buffer[24]==0&&
+            frame->IEE802Buffer[25]==0&&frame->IEE802Buffer[26]==0&&frame->IEE802Buffer[27]==0&&
+            frame->IEE802Buffer[28]==0&&frame->IEE802Buffer[29]==0&&frame->IEE802Buffer[30]==0&&
+            frame->IEE802Buffer[31]==1)||
+            (frame->IEE802Buffer[38]==254&&frame->IEE802Buffer[39]>=128&&frame->IEE802Buffer[39]<=191)||
+            frame->IEE802Buffer[38]==255||
+            (frame->IEE802Buffer[38]>=252&&frame->IEE802Buffer[38]<=253)||
+            (frame->IEE802Buffer[38]==0&&frame->IEE802Buffer[39]==0&&frame->IEE802Buffer[40]==0&&
+            frame->IEE802Buffer[41]==0&&frame->IEE802Buffer[42]==0&&frame->IEE802Buffer[43]==0&&
+            frame->IEE802Buffer[44]==0&&frame->IEE802Buffer[45]==0&&frame->IEE802Buffer[46]==0&&
+            frame->IEE802Buffer[47]==1)))return CloseFrame(frame);
+            else if((frame->IEE802Buffer[14]&240)==96){
+                ShowTimeByFrame(frame);
+                return CloseFrame(frame);
+            }
+            else return DropAndCloseFrame(frame);
+    }
+    return CloseFrame(frame);
+}
+static long long min_time = LLONG_MAX;
+static long long max_time = 0;
+static inline void ShowTimeByFrame(struct Frame*frame) {
+    long long time_ns = ktime_to_ns(ktime_sub(ktime_get(), frame->Start));
+    if (time_ns < min_time) min_time = time_ns;
+    if (time_ns > max_time) max_time = time_ns;
+    pr_info("Time (ns): %lld, Min: %lld, Max: %lld\n", time_ns, min_time, max_time);
+}
 #include<linux/slab.h>
 #include<linux/string.h>
 static void Print(const char *title, const unsigned char *data, int from, int to) {
@@ -226,7 +130,7 @@ static inline bool waitForMemoryIsAvailable(unsigned long memoryRequiredBytes){
     return false;
 }
 static inline void*waitForMemory(unsigned long memoryRequiredBytes){return waitForMemoryIsAvailable(memoryRequiredBytes)?kmalloc(memoryRequiredBytes,GFP_KERNEL):NULL;}
-static struct packet_type Gateway={.type=htons(ETH_P_ALL),.func=FrameReader,.ignore_outgoing=1};
+static struct packet_type Gateway={.type=htons(ETH_P_ALL),.func=VersionReader,.ignore_outgoing=1};
 static inline int CloseFrame(struct Frame*frame) {
     if(!frame)return 0;
     if(frame==Frames){
