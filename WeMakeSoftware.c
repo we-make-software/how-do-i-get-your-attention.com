@@ -71,8 +71,7 @@ static void AddDefaultMacAddressesReturnPointer(
     AddMacAddresses(skb,*CopyRouterMacAddress,*CopyServerMacAddress);
 }
 static void AddDefaultMacAddresses(struct sk_buff*skb){
-    unsigned char*CopyServerMacAddress=NULL;
-    unsigned char*CopyRouterMacAddress=NULL;
+    unsigned char*CopyServerMacAddress,*CopyRouterMacAddress;
     AddDefaultMacAddressesReturnPointer(skb,&CopyServerMacAddress,&CopyRouterMacAddress);
 }
 //Step2: Add the EtherType to the socket buffer
@@ -204,10 +203,8 @@ static struct packet_type Gateway = {.type = htons(ETH_P_ALL),.func = IEEE802_3R
 static int __init wms_init(void){
     ServerMacAddress = kmalloc(6 * sizeof(unsigned char), GFP_KERNEL);
     RouterMacAddress = kmalloc(6 * sizeof(unsigned char), GFP_KERNEL);
-    for (int i = 0; i < 6; i++) {
-        ServerMacAddress[i] = 0;
-        RouterMacAddress[i] = 0;
-    }
+    for (int i = 0; i < 6; i++) 
+      ServerMacAddress[i]=RouterMacAddress[i]=0;
     dev_add_pack(&Gateway);
     return 0;
 }
