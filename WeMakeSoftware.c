@@ -4,14 +4,10 @@
 #include <linux/skbuff.h>
 #include <linux/workqueue.h>
 #include <linux/slab.h>
-
-
-static void Send(struct sk_buff*DataLinkLayerBuffer){
-
+//Send a packet to the network device.
+static void Send(struct sk_buff*dataLinkLayerBuffer){
     dev_queue_xmit(skb);
 }
-
-
 // Designed for developers to print the values of the packet data.
 static void PrintBinary(const char *title, unsigned char *data, int size) {
     pr_info("%s: ", title); 
@@ -22,41 +18,78 @@ static void PrintBinary(const char *title, unsigned char *data, int size) {
     }
     pr_cont("\n");
 }
-// Setting from : 
-// - wms_init
-// - wms_exit
-// - RFC826Reader
-unsigned char*RouterMacAddress;
-
-
+// Setting of char
+unsigned char*RouterMacAddress,*RFC791Ethertype,*RFC8200Ethertype;
+// Increase the number of fragments in the packet. Max 17
 static void IncreaseFragments(struct skb_shared_info*fragments,const char value) {
     fragments->nr_frags += value;
 }
+// Easy access to the fragment index
 static skb_frag_t*GetFragmentIndex(struct skb_shared_info*fragments,const uint16_t index){
     return &fragments->frags[index];
 }
+// Add or set the fragment data
 static void AddOrSetFragmentData(struct skb_shared_info*fragments,const uint16_t index,unsigned char*data,const uint16_t length){
     skb_frag_t*frag=&fragments->frags[index];
     frag->bv_page=virt_to_page(data);
     frag->bv_offset=offset_in_page(data);
     frag->bv_len=length;
 }
-static struct sk_buff*DataLinkLayerBuffer=NULL;
-// Default network device
-struct net_device*NetworkDevice;
-static void InitDataLinkLayerBuffer(void){
-    if(DataLinkLayerBuffer)kfree_skb(DataLinkLayerBuffer);  
+// Templated
+static struct sk_buff*DataLinkLayerBuffer=NULL,DataLinkLayerRFC791Buffer=NULL,DataLinkLayerRFC8200Buffer=NULL;
+// Initialize the Templated of DataLinkLayerBuffer
+static void InitDataLinkLayerBuffer(void){ 
     DataLinkLayerBuffer=alloc_skb(0, GFP_KERNEL);
     DataLinkLayerBuffer->dev=NetworkDevice;
     struct skb_shared_info*fragments=skb_shinfo(DataLinkLayerBuffer);
-    IncreaseFragments(fragments,2);.
+    IncreaseFragments(fragments,2);
     AddOrSetFragmentData(fragments,0,RouterMacAddress,6);
     AddOrSetFragmentData(fragments,1,NetworkDevice->dev_addr,6);
 }
+// Create a new DataLinkLayerBuffer or clone the existing one
 static struct sk_buff*CreateDataLinkLayerBuffer(void){
     return DataLinkLayerBuffer?skb_clone(DataLinkLayerBuffer,GFP_KERNEL):NULL;
 }
+// Create a new DataLinkLayerBuffer with the given value 
+static struct sk_buff*CreateDataLinkLayerBufferByPointer(unsigned char*value){
+    struct sk_buff*dataLinkLayerBuffer=CreateDataLinkLayerBuffer();
+    struct skb_shared_info*fragments=skb_shinfo(dataLinkLayerBuffer);
+    IncreaseFragments(fragments,1);
+    AddOrSetFragmentData(fragments,2,value,2);
+    return dataLinkLayerBuffer;
+}
+// Initialize the Templated of DataLinkLayerRFC791Buffer
+static void InitDataLinkLayerRFC791Buffer(void){
+    DataLinkLayerRFC791Buffer=CreateDataLinkLayerBufferByPointer(RFC791Ethertype);
 
+}
+// Initialize the Templated of DataLinkLayerRFC8200Buffer
+static void InitDataLinkLayerRFC8200Buffer(void){
+    DataLinkLayerRFC8200Buffer=CreateDataLinkLayerBufferByPointer(RFC8200Ethertype);
+}
+// Create a new DataLinkLayerBuffer with the given value    
+static struct sk_buff*CreateDataLinkLayerRFC791Buffer(){
+    return DataLinkLayerRFC791Buffer?skb_clone(DataLinkLayerRFC791Buffer,GFP_KERNEL):NULL;
+}
+
+// Create a new DataLinkLayerBuffer with the given value
+static struct sk_buff*CreateDataLinkLayerRFC8200Buffer(){
+    return DataLinkLayerRFC8200Buffer?skb_clone(DataLinkLayerRFC8200Buffer,GFP_KERNEL):NULL;
+}
+// Create a new DataLinkLayerBuffer with the given DataLinkLayer
+static struct sk_buff*CreateDataLinkLayerBufferChoiceByIncoming(unsigned char*dataLinkLayer){
+    return dataLinkLayer[12]==8?CreateDataLinkLayerRFC791Buffer():CreateDataLinkLayerRFC8200Buffer();
+}
+// Buffer the link between the packets
+static void BufferLink(struct sk_buff*default,struct sk_buff*next){
+    default->next=next;
+    next->next=NULL;
+}
+
+// Get the network protocol from the data link layer
+static char NetworkProtocol(unsigned char*dataLinkLayer){
+    return dataLinkLayer[12]==8?4:6;
+}
 
 
 
@@ -66,17 +99,15 @@ static struct sk_buff*CreateDataLinkLayerBuffer(void){
 // - https://www.rfc-editor.org/rfc/rfc1035
 // We already know its for DNS in RFC 768
 // We stop the process if the length of the packet is less than 20 bytes. (We need to change this rules when we go deeper)
-static void RFC768RFC1035Reader(struct sk_buff*skb,unsigned char*dataLinkLayer,unsigned char*networkLayer,unsigned char*transportLayer,unsigned char*payload){
+static void RFC1035Reader(struct sk_buff*skb,unsigned char*dataLinkLayer,unsigned char*networkLayer,unsigned char*transportLayer,unsigned char*payload){
+    struct sk_buff*dataLinkLayerBuffer=CreateDataLinkLayerBufferChoiceByIncoming(dataLinkLayer);
+    if(!dataLinkLayerBuffer){
+        kfree_skb(skb);
+        return;
+    }
 
-
-}
-// Incoming : RFC 9293->RFC 1035
-// Useful links:
-// - https://www.rfc-editor.org/rfc/rfc1035
-// We already know it's for DNS in RFC 9293
-// We follow the same rules from RFC768RFC1035Reader (We need to change this rules when we go deeper)
-static void RFC9293RFC1035Reader(struct sk_buff*skb,unsigned char*dataLinkLayer,unsigned char*networkLayer,unsigned char*transportLayer,unsigned char*payload){
-  
+    kfree_skb(dataLinkLayerBuffer);
+    kfree_skb(skb);
 }
 static struct workqueue_struct*BackgroundApplicationLayerWorkQueue;
 struct BackgroundApplicationLayer{
@@ -122,7 +153,7 @@ static int RFC768Reader(
     switch ((rfc768Next[2]<<8)|rfc768Next[3]){
         case 53:
         {         
-            StartBackgroundApplicationLayerTask(RFC768RFC1035Reader,skb,dataLinkLayer,networkLayer,rfc768Next,rfc768Next+8);
+            StartBackgroundApplicationLayerTask(RFC1035Reader,skb,dataLinkLayer,networkLayer,rfc768Next,rfc768Next+8);
             return NET_RX_DROP;
         }
     }
@@ -140,7 +171,7 @@ static int RFC9293Reader(
     switch ((rfc9293Next[2]<<8)|rfc9293Next[3]){
         case 53:
         {
-            StartBackgroundApplicationLayerTask(RFC9293RFC1035Reader,skb,dataLinkLayer,networkLayer,rfc9293Next,rfc9293Next+((rfc9293Next[12]>>4)*4));
+            StartBackgroundApplicationLayerTask(RFC1035Reader,skb,dataLinkLayer,networkLayer,rfc9293Next,rfc9293Next+((rfc9293Next[12]>>4)*4));
             return NET_RX_DROP;
         }
     }
@@ -192,7 +223,7 @@ static int RFC826Reader(
     unsigned char*ieee802SourceMediaAccessControlAddress
     ){
     if (
-        NetworkDevice!=skb->dev&&
+        DataLinkLayerBuffer->dev!=skb->dev&&
         (ieee802SourceMediaAccessControlAddress[5]||
         ieee802SourceMediaAccessControlAddress[4]||
         ieee802SourceMediaAccessControlAddress[3]||
@@ -200,9 +231,8 @@ static int RFC826Reader(
         ieee802SourceMediaAccessControlAddress[1]||
         ieee802SourceMediaAccessControlAddress[0])
         ){
-            NetworkDevice=skb->dev;
+             DataLinkLayerBuffer->dev=skb->dev;
             for(int i=0;i<6;i++)RouterMacAddress[i]=ieee802SourceMediaAccessControlAddress[i];
-            InitDataLinkLayerBuffer();
         }
     return NET_RX_SUCCESS;
 }
@@ -228,6 +258,15 @@ static struct packet_type Gateway = {.type = htons(ETH_P_ALL),.func = IEEE802_3R
 static int __init wms_init(void){
     BackgroundApplicationLayerWorkQueue=alloc_workqueue("BackgroundApplicationLayerWorkQueue",WQ_UNBOUND,0);
     RouterMacAddress=kmalloc(6*sizeof(unsigned char),GFP_KERNEL);
+    RFC791Ethertype=kmalloc(2*sizeof(unsigned char),GFP_KERNEL);
+    RFC791Ethertype[0]=8;
+    RFC791Ethertype[1]=0;
+    RFC8200Ethertype=kmalloc(2*sizeof(unsigned char),GFP_KERNEL);
+    RFC8200Ethertype[0]=134;
+    RFC8200Ethertype[1]=221;
+    InitDataLinkLayerBuffer();
+    InitDataLinkLayerRFC791Buffer();
+    InitDataLinkLayerRFC8200Buffer();
     dev_add_pack(&Gateway);
     return 0;
 }
@@ -236,8 +275,12 @@ static void __exit wms_exit(void){
     dev_remove_pack(&Gateway);
     flush_workqueue(BackgroundApplicationLayerWorkQueue);
     destroy_workqueue(BackgroundApplicationLayerWorkQueue);
-    kfree(RouterMacAddress);
     kfree_skb(DataLinkLayerBuffer);
+    kfree_skb(DataLinkLayerRFC791Buffer);
+    kfree_skb(DataLinkLayerRFC8200Buffer);
+    kfree(RouterMacAddress);
+    kfree(RFC791Ethertype);
+    kfree(RFC8200Ethertype);
 }
 module_exit(wms_exit);
 MODULE_LICENSE("GPL");
