@@ -4,121 +4,37 @@
 #include <linux/skbuff.h>
 #include <linux/workqueue.h>
 #include <linux/slab.h>
-//Send a packet to the network device.
-static void Send(struct sk_buff*dataLinkLayerBuffer){
-    dev_queue_xmit(skb);
-}
-// Designed for developers to print the values of the packet data.
-static void PrintBinary(const char *title, unsigned char *data, int size) {
-    pr_info("%s: ", title); 
-    for (int i = 0; i < size; i++) {
-        for (int bit = 7; bit >= 0; bit--) 
-             pr_cont("%d", (data[i] >> bit) & 1);
-        pr_cont(" "); 
-    }
-    pr_cont("\n");
-}
-// Setting of char
-unsigned char*RouterMacAddress,*RFC791Ethertype,*RFC8200Ethertype;
-// Increase the number of fragments in the packet. Max 17
-static void IncreaseFragments(struct skb_shared_info*fragments,const char value) {
-    fragments->nr_frags += value;
-}
-// Easy access to the fragment index
-static skb_frag_t*GetFragmentIndex(struct skb_shared_info*fragments,const uint16_t index){
-    return &fragments->frags[index];
-}
-// Add or set the fragment data
-static void AddOrSetFragmentData(struct skb_shared_info*fragments,const uint16_t index,unsigned char*data,const uint16_t length){
-    skb_frag_t*frag=&fragments->frags[index];
-    frag->bv_page=virt_to_page(data);
-    frag->bv_offset=offset_in_page(data);
-    frag->bv_len=length;
-}
-// Templated
-static struct sk_buff*DataLinkLayerBuffer=NULL,DataLinkLayerRFC791Buffer=NULL,DataLinkLayerRFC8200Buffer=NULL;
-// Initialize the Templated of DataLinkLayerBuffer
-static void InitDataLinkLayerBuffer(void){ 
-    DataLinkLayerBuffer=alloc_skb(0, GFP_KERNEL);
-    DataLinkLayerBuffer->dev=NetworkDevice;
-    struct skb_shared_info*fragments=skb_shinfo(DataLinkLayerBuffer);
-    IncreaseFragments(fragments,2);
-    AddOrSetFragmentData(fragments,0,RouterMacAddress,6);
-    AddOrSetFragmentData(fragments,1,NetworkDevice->dev_addr,6);
-}
-// Create a new DataLinkLayerBuffer or clone the existing one
-static struct sk_buff*CreateDataLinkLayerBuffer(void){
-    return DataLinkLayerBuffer?skb_clone(DataLinkLayerBuffer,GFP_KERNEL):NULL;
-}
-// Create a new DataLinkLayerBuffer with the given value 
-static struct sk_buff*CreateDataLinkLayerBufferByPointer(unsigned char*value){
-    struct sk_buff*dataLinkLayerBuffer=CreateDataLinkLayerBuffer();
-    struct skb_shared_info*fragments=skb_shinfo(dataLinkLayerBuffer);
-    IncreaseFragments(fragments,1);
-    AddOrSetFragmentData(fragments,2,value,2);
-    return dataLinkLayerBuffer;
-}
-// Initialize the Templated of DataLinkLayerRFC791Buffer
-static void InitDataLinkLayerRFC791Buffer(void){
-    DataLinkLayerRFC791Buffer=CreateDataLinkLayerBufferByPointer(RFC791Ethertype);
-
-}
-// Initialize the Templated of DataLinkLayerRFC8200Buffer
-static void InitDataLinkLayerRFC8200Buffer(void){
-    DataLinkLayerRFC8200Buffer=CreateDataLinkLayerBufferByPointer(RFC8200Ethertype);
-}
-// Create a new DataLinkLayerBuffer with the given value    
-static struct sk_buff*CreateDataLinkLayerRFC791Buffer(){
-    return DataLinkLayerRFC791Buffer?skb_clone(DataLinkLayerRFC791Buffer,GFP_KERNEL):NULL;
-}
-
-// Create a new DataLinkLayerBuffer with the given value
-static struct sk_buff*CreateDataLinkLayerRFC8200Buffer(){
-    return DataLinkLayerRFC8200Buffer?skb_clone(DataLinkLayerRFC8200Buffer,GFP_KERNEL):NULL;
-}
-// Create a new DataLinkLayerBuffer with the given DataLinkLayer
-static struct sk_buff*CreateDataLinkLayerBufferChoiceByIncoming(unsigned char*dataLinkLayer){
-    return dataLinkLayer[12]==8?CreateDataLinkLayerRFC791Buffer():CreateDataLinkLayerRFC8200Buffer();
-}
-// Buffer the link between the packets
-static void BufferLink(struct sk_buff*default,struct sk_buff*next){
-    default->next=next;
-    next->next=NULL;
-}
-
-// Get the network protocol from the data link layer
-static char NetworkProtocol(unsigned char*dataLinkLayer){
-    return dataLinkLayer[12]==8?4:6;
-}
+//  memset(header, 0, len); // This is a good practice to clear the memory.
 
 
 
-
-// Incoming : RFC 768->RFC 1035
+// Incoming : RFC 1035
 // Useful links:
 // - https://www.rfc-editor.org/rfc/rfc1035
 // We already know its for DNS in RFC 768
 // We stop the process if the length of the packet is less than 20 bytes. (We need to change this rules when we go deeper)
-static void RFC1035Reader(struct sk_buff*skb,unsigned char*dataLinkLayer,unsigned char*networkLayer,unsigned char*transportLayer,unsigned char*payload){
-    struct sk_buff*dataLinkLayerBuffer=CreateDataLinkLayerBufferChoiceByIncoming(dataLinkLayer);
-    if(!dataLinkLayerBuffer){
-        kfree_skb(skb);
-        return;
-    }
+static void RFC1035Reader(
+    struct sk_buff*in,
+    unsigned char*dataLinkLayer,
+    unsigned char*networkLayer,
+    unsigned char*transportLayer,
+    unsigned char*applicationLayer
+    ){
+  
 
-    kfree_skb(dataLinkLayerBuffer);
-    kfree_skb(skb);
+    kfree_skb(in);
 }
 static struct workqueue_struct*BackgroundApplicationLayerWorkQueue;
 struct BackgroundApplicationLayer{
     struct work_struct work;
     struct sk_buff*skb;
-    unsigned char*dataLinkLayer,*networkLayer,*transportLayer,*payload;
-    void (*callback)(struct sk_buff*,unsigned char*,unsigned char*,unsigned char*,unsigned char*);
+    unsigned char*dataLinkLayer,*networkLayer,*transportLayer,*applicationLayer;
+    void(*callback)(struct sk_buff*,unsigned char*,unsigned char*,unsigned char*,unsigned char*);
 };
+
 static void RunBackgroundApplicationLayerTask(struct work_struct*work) {
     struct BackgroundApplicationLayer*task=container_of(work,struct BackgroundApplicationLayer,work);
-    task->callback(task->skb,task->dataLinkLayer,task->networkLayer,task->transportLayer, task->payload);
+    task->callback(task->skb,task->dataLinkLayer,task->networkLayer,task->transportLayer, task->applicationLayer);
     kfree(task);
 }
 static void StartBackgroundApplicationLayerTask(
@@ -127,7 +43,7 @@ static void StartBackgroundApplicationLayerTask(
     unsigned char*dataLinkLayer,
     unsigned char*networkLayer,
     unsigned char*transportLayer,
-    unsigned char*payload
+    unsigned char*applicationLayer
     ){
     struct BackgroundApplicationLayer*task=kmalloc(sizeof(struct BackgroundApplicationLayer),GFP_KERNEL);
     if (!task)return;
@@ -136,7 +52,7 @@ static void StartBackgroundApplicationLayerTask(
     task->dataLinkLayer=dataLinkLayer;
     task->networkLayer=networkLayer;
     task->transportLayer=transportLayer;
-    task->payload=payload;
+    task->applicationLayer=applicationLayer;
     task->callback=callback;
     queue_work(BackgroundApplicationLayerWorkQueue,&task->work);
 }
@@ -222,28 +138,11 @@ static int RFC826Reader(
     struct sk_buff*skb,
     unsigned char*ieee802SourceMediaAccessControlAddress
     ){
-    if (
-        DataLinkLayerBuffer->dev!=skb->dev&&
-        (ieee802SourceMediaAccessControlAddress[5]||
-        ieee802SourceMediaAccessControlAddress[4]||
-        ieee802SourceMediaAccessControlAddress[3]||
-        ieee802SourceMediaAccessControlAddress[2]||
-        ieee802SourceMediaAccessControlAddress[1]||
-        ieee802SourceMediaAccessControlAddress[0])
-        ){
-             DataLinkLayerBuffer->dev=skb->dev;
-            for(int i=0;i<6;i++)RouterMacAddress[i]=ieee802SourceMediaAccessControlAddress[i];
-        }
+
     return NET_RX_SUCCESS;
 }
 // Incoming : IEEE 802.3
-//
-// Note: skb->len is the length of the entire packet, including the IEEE 802.3 header.
-//
-// By default, it needs to be more than 40 bytes because RFC 791 (IPv4) is at least 20 bytes, and  RFC 768 (UDP) is 8 bytes,
-// and IEEE 802.3 is 14 bytes, totaling 34 bytes. The global EtherTypes are 2048 (IPv4), 
-// 2054 (ARP), and 34525 (IPv6). While there can be more, these 3 are the global standards.
-static int IEEE802_3Reader(
+static int DataLinkLayerReader(
     struct sk_buff*skb,
     struct net_device*dev,
     struct packet_type*pt,
@@ -253,20 +152,9 @@ static int IEEE802_3Reader(
     unsigned char*ieee802=skb_mac_header(skb);
     return ieee802[12]==8?ieee802[13]?RFC826Reader(skb,ieee802+6):RFC791Reader(skb,ieee802,ieee802+14):RFC8200Reader(skb,ieee802,ieee802+14);
 }
-static struct packet_type Gateway = {.type = htons(ETH_P_ALL),.func = IEEE802_3Reader,.ignore_outgoing = 1};
-
+static struct packet_type Gateway={.type=htons(ETH_P_ALL),.func=DataLinkLayerReader,.ignore_outgoing = 1};
 static int __init wms_init(void){
     BackgroundApplicationLayerWorkQueue=alloc_workqueue("BackgroundApplicationLayerWorkQueue",WQ_UNBOUND,0);
-    RouterMacAddress=kmalloc(6*sizeof(unsigned char),GFP_KERNEL);
-    RFC791Ethertype=kmalloc(2*sizeof(unsigned char),GFP_KERNEL);
-    RFC791Ethertype[0]=8;
-    RFC791Ethertype[1]=0;
-    RFC8200Ethertype=kmalloc(2*sizeof(unsigned char),GFP_KERNEL);
-    RFC8200Ethertype[0]=134;
-    RFC8200Ethertype[1]=221;
-    InitDataLinkLayerBuffer();
-    InitDataLinkLayerRFC791Buffer();
-    InitDataLinkLayerRFC8200Buffer();
     dev_add_pack(&Gateway);
     return 0;
 }
@@ -275,12 +163,7 @@ static void __exit wms_exit(void){
     dev_remove_pack(&Gateway);
     flush_workqueue(BackgroundApplicationLayerWorkQueue);
     destroy_workqueue(BackgroundApplicationLayerWorkQueue);
-    kfree_skb(DataLinkLayerBuffer);
-    kfree_skb(DataLinkLayerRFC791Buffer);
-    kfree_skb(DataLinkLayerRFC8200Buffer);
-    kfree(RouterMacAddress);
-    kfree(RFC791Ethertype);
-    kfree(RFC8200Ethertype);
+
 }
 module_exit(wms_exit);
 MODULE_LICENSE("GPL");
