@@ -24,12 +24,11 @@ static void PrintBinary(const Byte*title,Byte*bytes,int size) {
     }
     pr_cont("\n");
 }
-#define ThreadFunction(Name,Struct)typedef struct Thread##Name##Wrapper{struct task_struct *task;Struct *object;}Thread##Name##Wrapper; static void Thread##Name##Reader(struct task_struct*,Struct*); static int Thread##Name##Bind(void*arg){Thread##Name##Wrapper*wrapper=(Thread##Name##Wrapper*)arg;Thread##Name##Reader(wrapper->task,wrapper->object);kfree(wrapper);return 0;} static void Thread##Name(Struct*object){Thread##Name##Wrapper*wrapper=kmalloc(sizeof(Thread##Name##Wrapper),GFP_KERNEL);if(!wrapper){Thread##Name##Reader(NULL,object);return;}wrapper->object=object;uuid_t uuid;char uuid_str[UUID_STRING_LEN];uuid_gen(&uuid);snprintf(uuid_str,UUID_STRING_LEN,"%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",uuid.b[0],uuid.b[1],uuid.b[2],uuid.b[3],uuid.b[4],uuid.b[5],uuid.b[6],uuid.b[7],uuid.b[8],uuid.b[9],uuid.b[10],uuid.b[11],uuid.b[12],uuid.b[13],uuid.b[14],uuid.b[15]);char thread_name[64];snprintf(thread_name,sizeof(thread_name),"ThreadName_%s",uuid_str);wrapper->task=kthread_run(Thread##Name##Bind,wrapper,thread_name);if(IS_ERR(wrapper->task)){Thread##Name##Reader(NULL,object);kfree(wrapper);return;}}static void Thread##Name##Reader(struct task_struct*thread,Test*object)
+#define ThreadFunction(Name,Struct)typedef struct Thread##Name##Wrapper{Thread*task;Struct *object;}Thread##Name##Wrapper; static void Thread##Name##Reader(Thread*,Struct*); static int Thread##Name##Bind(void*arg){Thread##Name##Wrapper*wrapper=(Thread##Name##Wrapper*)arg;Thread##Name##Reader(wrapper->task,wrapper->object);kfree(wrapper);return 0;} static void Thread##Name(Struct*object){Thread##Name##Wrapper*wrapper=kmalloc(sizeof(Thread##Name##Wrapper),GFP_KERNEL);if(!wrapper){Thread##Name##Reader(NULL,object);return;}wrapper->object=object;uuid_t uuid;char uuid_str[UUID_STRING_LEN];uuid_gen(&uuid);snprintf(uuid_str,UUID_STRING_LEN,"WMS%02x%02x%02x%02x_%02x%02x_%02x%02x_%02x%02x_%02x%02x%02x%02x%02x%02x",uuid.b[0],uuid.b[1],uuid.b[2],uuid.b[3],uuid.b[4],uuid.b[5],uuid.b[6],uuid.b[7],uuid.b[8],uuid.b[9],uuid.b[10],uuid.b[11],uuid.b[12],uuid.b[13],uuid.b[14],uuid.b[15]);char thread_name[64];snprintf(thread_name,sizeof(thread_name),"ThreadName_%s",uuid_str);wrapper->task=kthread_run(Thread##Name##Bind,wrapper,thread_name);if(IS_ERR(wrapper->task)){Thread##Name##Reader(NULL,object);kfree(wrapper);return;}}static void Thread##Name##Reader(Thread*task,Struct*object)
 // Read to learn!
 // This is use to hold network data and the network device
 typedef struct NetworkDevice{
     NetworkConnection*Connection;
-    Byte*RouterMac;
     uint32_t PacketLimitation;
     Buffer*FirstOut,*MiddelOut,*LastOut;
     Mutex Get;
@@ -46,9 +45,45 @@ static int Send(Buffer*Out){
     return dev_queue_xmit(Out);
 }
 
+// This is to make extra buffer for the network device
+ThreadFunction(PrepareNetworkDeviceHandlerBuffer,NetworkDevice){
+    object->MiddelOut=object->LastOut;
+    uint32_t MaximumCreation=object->PacketLimitation/4;
+    for (uint32_t i=0;i<MaximumCreation;i++)
+    {
+        Buffer*Out=alloc_skb(1514,GFP_KERNEL);
+        Out->dev=object->Connection;
+        Out->next=NULL;
+        Out->len=14;
+        memcpy(object->LastOut->data+6,object->Connection->dev_addr,6);
+        object->LastOut->next=Out;
+        object->LastOut=Out;
+        if (i%1000==0)
+            cond_resched();
+    }
+}
+// To just make it faster for the client to get the data
 ThreadFunction(InitializeNetworkDeviceHandlerBuffer,NetworkDevice){
     uint32_t MaximumCreation=object->PacketLimitation/4;
-
+    for (uint32_t i=0;i<MaximumCreation;i++)
+    {
+        object->LastOut=alloc_skb(1514,GFP_KERNEL);
+        
+        object->LastOut->dev=object->Connection;
+        object->LastOut->next=NULL;
+        object->LastOut->len=14;
+        memcpy(object->LastOut->data+6,object->Connection->dev_addr,6);
+        if(!object->FirstOut)
+            object->FirstOut=object->MiddelOut=object->LastOut;
+        else{
+            object->MiddelOut->next=object->LastOut;
+            object->MiddelOut=object->LastOut;
+        }
+        
+        if (i%1000==0)
+            cond_resched();
+    }
+    ThreadPrepareNetworkDeviceHandlerBufferReader(task,object);
 }
 
 static int DataLinkLayerReader(NetworkDevice*networkDevice,Buffer*In,Byte*Payload){
@@ -75,12 +110,11 @@ static int __init wms_init(void){
             if (!networkConnection->ethtool_ops->get_link_ksettings(networkConnection,&ksettings)&&ksettings.base.speed&&ksettings.base.speed!=UINT_MAX){
                 NetworkDevice*networkDevice=kmalloc(sizeof(NetworkDevice),GFP_KERNEL);
                 networkDevice->Connection=networkConnection;
-                networkDevice->RouterMac=kzalloc(6,GFP_KERNEL);
                 networkDevice->PacketLimitation=ksettings.base.speed*144;
                 networkDevice->prev=NetworkDevices;
-                networkDevice->FirstOut=networkDevice->MiddelOut=networkDevice->LastOut=NULL;
+                networkDevice->FirstOut=NULL;
                 mutex_init(&networkDevice->Get);
-             
+                ThreadInitializeNetworkDeviceHandlerBuffer(networkDevice);
             }
         }
     dev_add_pack(&NetworkCardReader);
@@ -95,7 +129,6 @@ static void __exit wms_exit(void){
             bufferNext=NetworkDevices->FirstOut->next;
             kfree_skb(NetworkDevices->FirstOut);
         }
-        kfree(NetworkDevices->RouterMac);
         kfree(NetworkDevices);
     }
 }

@@ -1,1 +1,0 @@
-savedcmd_/root/how-to-get-your-attention.com/Module.symvers :=  scripts/mod/modpost -M -m -a      -o /root/how-to-get-your-attention.com/Module.symvers -T /root/how-to-get-your-attention.com/modules.order -i Module.symvers -e 

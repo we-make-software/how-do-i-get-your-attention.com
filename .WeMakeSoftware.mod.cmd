@@ -1,1 +1,0 @@
-savedcmd_/root/how-to-get-your-attention.com/WeMakeSoftware.mod := printf '%s\n'   WeMakeSoftware.o | awk '!x[$$0]++ { print("/root/how-to-get-your-attention.com/"$$0) }' > /root/how-to-get-your-attention.com/WeMakeSoftware.mod
