@@ -35,7 +35,7 @@ typedef struct NetworkDevice{
     struct NetworkDevice*prev;
 }NetworkDevice;
 NetworkDevice*NetworkDevices=NULL;
-// This is use to send data but after the data is send the data is not free
+// This is use to send data but after the data is send the data is free
 static int SendAndFree(Buffer*Out){
     return dev_queue_xmit(Out);
 }
@@ -96,6 +96,7 @@ ThreadFunction(InitializeNetworkDeviceHandlerBuffer,NetworkDevice){
 static int DataLinkLayerReader(NetworkDevice*networkDevice,Buffer*In,Byte*Payload){
     return NET_RX_SUCCESS;
 }
+
 // This is the router to the network devices
 static int Router(Buffer*In,NetworkConnection*connection,struct packet_type*pt,struct net_device*orig_dev){
     if(In->len<40)return NET_RX_SUCCESS;
