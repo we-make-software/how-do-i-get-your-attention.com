@@ -93,7 +93,7 @@ ThreadFunction(InitializeNetworkDeviceHandlerBuffer,NetworkDevice){
     ThreadPrepareNetworkDeviceHandlerBufferReader(task,object);
 }
 
-static int DataLinkLayerReader(NetworkDevice*networkDevice,Buffer*In,Byte*Payload){
+static int DataLinkLayerReader(NetworkDevice*networkDevice,Buffer*In,Byte*InBytes){
     return NET_RX_SUCCESS;
 }
 
@@ -103,8 +103,8 @@ static int Router(Buffer*In,NetworkConnection*connection,struct packet_type*pt,s
     NetworkDevice *networkDevice=NetworkDevices;
     for(;networkDevice&&networkDevice->Connection!=connection;networkDevice=networkDevice->prev);
     if(!networkDevice)return NET_RX_SUCCESS;
-    Byte*Payload=skb_mac_header(In);
-    return DataLinkLayerReader(networkDevice,In,Payload);
+    Byte*InBytes=skb_mac_header(In);
+    return DataLinkLayerReader(networkDevice,In,InBytes);
 }
 //Yes this is the place where the magic happens
 static struct packet_type NetworkCardReader={.type=htons(ETH_P_ALL),.func=Router,.ignore_outgoing = 1};
