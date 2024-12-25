@@ -44,7 +44,6 @@ static int Send(Buffer*Out){
     skb_get(Out);
     return dev_queue_xmit(Out);
 }
-
 // This is to make extra buffer for the network device
 ThreadFunction(PrepareNetworkDeviceHandlerBuffer,NetworkDevice){
     object->MiddelOut=object->LastOut;
@@ -62,13 +61,22 @@ ThreadFunction(PrepareNetworkDeviceHandlerBuffer,NetworkDevice){
             cond_resched();
     }
 }
+static Buffer*NewDataLinkLayer(NetworkDevice*networkDevice){
+    mutex_lock(&networkDevice->Get);
+    if(networkDevice->FirstOut==networkDevice->MiddelOut)
+        ThreadPrepareNetworkDeviceHandlerBuffer(networkDevice);
+    Buffer*Out=networkDevice->FirstOut;
+    networkDevice->FirstOut=networkDevice->FirstOut->next;
+    Out->next=NULL;
+    mutex_unlock(&networkDevice->Get);
+    return Out;
+}
 // To just make it faster for the client to get the data
 ThreadFunction(InitializeNetworkDeviceHandlerBuffer,NetworkDevice){
     uint32_t MaximumCreation=object->PacketLimitation/4;
     for (uint32_t i=0;i<MaximumCreation;i++)
     {
         object->LastOut=alloc_skb(1514,GFP_KERNEL);
-        
         object->LastOut->dev=object->Connection;
         object->LastOut->next=NULL;
         object->LastOut->len=14;
@@ -79,7 +87,6 @@ ThreadFunction(InitializeNetworkDeviceHandlerBuffer,NetworkDevice){
             object->MiddelOut->next=object->LastOut;
             object->MiddelOut=object->LastOut;
         }
-        
         if (i%1000==0)
             cond_resched();
     }
@@ -89,7 +96,7 @@ ThreadFunction(InitializeNetworkDeviceHandlerBuffer,NetworkDevice){
 static int DataLinkLayerReader(NetworkDevice*networkDevice,Buffer*In,Byte*Payload){
     return NET_RX_SUCCESS;
 }
-
+// This is the router to the network devices
 static int Router(Buffer*In,NetworkConnection*connection,struct packet_type*pt,struct net_device*orig_dev){
     if(In->len<40)return NET_RX_SUCCESS;
     NetworkDevice *networkDevice=NetworkDevices;
@@ -98,8 +105,6 @@ static int Router(Buffer*In,NetworkConnection*connection,struct packet_type*pt,s
     Byte*Payload=skb_mac_header(In);
     return DataLinkLayerReader(networkDevice,In,Payload);
 }
-
-
 //Yes this is the place where the magic happens
 static struct packet_type NetworkCardReader={.type=htons(ETH_P_ALL),.func=Router,.ignore_outgoing = 1};
 static int __init wms_init(void){
