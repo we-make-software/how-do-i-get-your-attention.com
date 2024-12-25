@@ -39,7 +39,7 @@ NetworkDevice*NetworkDevices=NULL;
 static int SendAndFree(Buffer*Out){
     return dev_queue_xmit(Out);
 }
-// This is use to hold the data of the network data even the data is send wee will be responsible to free the data if not wee use Send
+// This is use to hold the data of the network data even the data is send wee will be responsible to free the data if wee not use Send
 static int Send(Buffer*Out){
     skb_get(Out);
     return dev_queue_xmit(Out);
