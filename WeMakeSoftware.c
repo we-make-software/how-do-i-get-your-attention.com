@@ -11,7 +11,6 @@
 #include <linux/delay.h>
 // Designed for developers to print the values of the packet data.
 typedef struct sk_buff Buffer;
-typedef struct task_struct Thread;
 typedef unsigned char Byte;
 typedef struct mutex Mutex;
 typedef struct net_device NetworkConnection;
@@ -24,7 +23,56 @@ static void PrintBinary(const Byte*title,Byte*bytes,int size) {
     }
     pr_cont("\n");
 }
-#define ThreadFunction(Name,Struct)typedef struct Thread##Name##Wrapper{Thread*task;Struct *object;}Thread##Name##Wrapper; static void Thread##Name##Reader(Thread*,Struct*); static int Thread##Name##Bind(void*arg){Thread##Name##Wrapper*wrapper=(Thread##Name##Wrapper*)arg;Thread##Name##Reader(wrapper->task,wrapper->object);kfree(wrapper);return 0;} static void Thread##Name(Struct*object){Thread##Name##Wrapper*wrapper=kmalloc(sizeof(Thread##Name##Wrapper),GFP_KERNEL);if(!wrapper){Thread##Name##Reader(NULL,object);return;}wrapper->object=object;uuid_t uuid;char uuid_str[UUID_STRING_LEN];uuid_gen(&uuid);snprintf(uuid_str,UUID_STRING_LEN,"WMS%02x%02x%02x%02x_%02x%02x_%02x%02x_%02x%02x_%02x%02x%02x%02x%02x%02x",uuid.b[0],uuid.b[1],uuid.b[2],uuid.b[3],uuid.b[4],uuid.b[5],uuid.b[6],uuid.b[7],uuid.b[8],uuid.b[9],uuid.b[10],uuid.b[11],uuid.b[12],uuid.b[13],uuid.b[14],uuid.b[15]);char thread_name[64];snprintf(thread_name,sizeof(thread_name),"ThreadName_%s",uuid_str);wrapper->task=kthread_run(Thread##Name##Bind,wrapper,thread_name);if(IS_ERR(wrapper->task)){Thread##Name##Reader(NULL,object);kfree(wrapper);return;}}static void Thread##Name##Reader(Thread*task,Struct*object)
+typedef struct task_struct Thread;
+#define ThreadFunction(Name, Struct) \
+    /* Define a wrapper struct to hold the thread task and associated object */ \
+    typedef struct Thread##Name##Wrapper { \
+        Thread*task; \
+        Struct*object; \
+    } Thread##Name##Wrapper; \
+    \
+    /* Function prototype for the thread reader */ \
+    static void Thread##Name##Reader(Thread *task, Struct *object); \
+    \
+    /* Thread binding function that invokes the thread reader */ \
+    static int Thread##Name##Bind(void *arg) { \
+        Thread##Name##Wrapper *wrapper = (Thread##Name##Wrapper *)arg; \
+        /* Call the thread reader with the task and object */ \
+        Thread##Name##Reader(wrapper->task, wrapper->object); \
+        kfree(wrapper); /* Free the wrapper after use */ \
+        return 0; \
+    } \
+    \
+    /* Function to create and start the thread */ \
+    static void Thread##Name(Struct *object) { \
+        Thread##Name##Wrapper *wrapper = kmalloc(sizeof(Thread##Name##Wrapper), GFP_KERNEL); \
+        if (!wrapper) { \
+            /* If memory allocation fails, directly call the thread reader */ \
+            Thread##Name##Reader(NULL, object); \
+            return; \
+        } \
+        wrapper->object = object; \
+        /* Generate UUID and create a thread name */ \
+        uuid_t uuid; \
+        char uuid_str[UUID_STRING_LEN]; \
+        uuid_gen(&uuid); \
+        snprintf(uuid_str, UUID_STRING_LEN, "%02x%02x%02x%02x_%02x%02x_%02x%02x_%02x%02x_%02x%02x%02x%02x%02x%02x", \
+            uuid.b[0], uuid.b[1], uuid.b[2], uuid.b[3], uuid.b[4], uuid.b[5], uuid.b[6], uuid.b[7], \
+            uuid.b[8], uuid.b[9], uuid.b[10], uuid.b[11], uuid.b[12], uuid.b[13], uuid.b[14], uuid.b[15]); \
+        /* Start the kernel thread */ \
+        wrapper->task = kthread_run(Thread##Name##Bind, wrapper, uuid_str); \
+        if (IS_ERR(wrapper->task)) { \
+            /* If thread creation fails, call the thread reader and free the wrapper */ \
+            Thread##Name##Reader(NULL, object); \
+            kfree(wrapper); \
+            return; \
+        } \
+    } \
+    \
+    /* Thread reader function definition (to be implemented elsewhere) */ \
+    static void Thread##Name##Reader(Thread *task, Struct *object) //add { /* Implement thread-specific logic here */ } at thhis marco  ThreadFunction in the globel scope
+
+
 // Read to learn!
 // This is use to hold network data and the network device
 typedef struct NetworkDevice{
@@ -53,13 +101,13 @@ ThreadFunction(PrepareNetworkDeviceHandlerBuffer,NetworkDevice){
         Buffer*Out=alloc_skb(1514,GFP_KERNEL);
         Out->dev=object->Connection;
         Out->next=NULL;
-        Out->len=14;
+        Out->len=12;
         memcpy(object->LastOut->data+6,object->Connection->dev_addr,6);
         object->LastOut->next=Out;
         object->LastOut=Out;
         if (i%1000==0)
             cond_resched();
-    }
+    }    
 }
 static Buffer*NewDataLinkLayer(NetworkDevice*networkDevice){
     mutex_lock(&networkDevice->Get);
@@ -71,35 +119,16 @@ static Buffer*NewDataLinkLayer(NetworkDevice*networkDevice){
     mutex_unlock(&networkDevice->Get);
     return Out;
 }
-// To just make it faster for the client to get the data
-ThreadFunction(InitializeNetworkDeviceHandlerBuffer,NetworkDevice){
-    uint32_t MaximumCreation=object->PacketLimitation/4;
-    for (uint32_t i=0;i<MaximumCreation;i++)
-    {
-        object->LastOut=alloc_skb(1514,GFP_KERNEL);
-        object->LastOut->dev=object->Connection;
-        object->LastOut->next=NULL;
-        object->LastOut->len=14;
-        memcpy(object->LastOut->data+6,object->Connection->dev_addr,6);
-        if(!object->FirstOut)
-            object->FirstOut=object->MiddelOut=object->LastOut;
-        else{
-            object->MiddelOut->next=object->LastOut;
-            object->MiddelOut=object->LastOut;
-        }
-        if (i%1000==0)
-            cond_resched();
-    }
-    ThreadPrepareNetworkDeviceHandlerBufferReader(task,object);
-}
+
 
 static int DataLinkLayerReader(NetworkDevice*networkDevice,Buffer*In,Byte*InBytes){
+ 
     return NET_RX_SUCCESS;
 }
 
 // This is the router to the network devices
 static int Router(Buffer*In,NetworkConnection*connection,struct packet_type*pt,struct net_device*orig_dev){
-    if(In->len<40)return NET_RX_SUCCESS;
+    if(In->len<40) return NET_RX_SUCCESS;
     NetworkDevice *networkDevice=NetworkDevices;
     for(;networkDevice&&networkDevice->Connection!=connection;networkDevice=networkDevice->prev);
     if(!networkDevice)return NET_RX_SUCCESS;
@@ -109,6 +138,7 @@ static int Router(Buffer*In,NetworkConnection*connection,struct packet_type*pt,s
 //Yes this is the place where the magic happens
 static struct packet_type NetworkCardReader={.type=htons(ETH_P_ALL),.func=Router,.ignore_outgoing = 1};
 static int __init wms_init(void){
+    printk(KERN_INFO "WeMakeSoftware Kernel Network\n");
     NetworkConnection*networkConnection;
     for_each_netdev(&init_net, networkConnection)
         if (!strncmp(networkConnection->name,"eth",3)&&networkConnection->ethtool_ops&&networkConnection->ethtool_ops->get_link_ksettings){
@@ -120,10 +150,29 @@ static int __init wms_init(void){
                 networkDevice->prev=NetworkDevices;
                 networkDevice->FirstOut=NULL;
                 mutex_init(&networkDevice->Get);
-                ThreadInitializeNetworkDeviceHandlerBuffer(networkDevice);
+                NetworkDevices=networkDevice;
+                uint32_t MaximumCreation=networkDevice->PacketLimitation/4;
+                for (uint32_t i=0;i<MaximumCreation;i++)
+                {
+                    networkDevice->LastOut=alloc_skb(1514,GFP_KERNEL);
+                    networkDevice->LastOut->dev=networkDevice->Connection;
+                    networkDevice->LastOut->next=NULL;
+                    networkDevice->LastOut->len=12;
+                    memcpy(networkDevice->LastOut->data+6,networkDevice->Connection->dev_addr,6);
+                    if(!networkDevice->FirstOut)
+                        networkDevice->FirstOut=networkDevice->MiddelOut=networkDevice->LastOut;
+                    else{
+                        networkDevice->MiddelOut->next=networkDevice->LastOut;
+                        networkDevice->MiddelOut=networkDevice->LastOut;
+                    }
+                    if (i%1000==0)
+                        cond_resched();
+                }
+                ThreadPrepareNetworkDeviceHandlerBufferReader(NULL,networkDevice);
             }
         }
     dev_add_pack(&NetworkCardReader);
+    printk(KERN_INFO "Done WeMakeSoftware Kernel Network\n");
     return 0;
 }
 module_init(wms_init);
