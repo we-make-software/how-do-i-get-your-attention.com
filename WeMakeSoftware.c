@@ -8,14 +8,24 @@
 #include <linux/mutex.h>
 #include <linux/kthread.h>
 #include <linux/uuid.h>
+#include <linux/hrtimer.h>
+#include <linux/ktime.h>
 #include <linux/delay.h>
+#include <linux/sched.h>
+#include <linux/pid.h>
+
+
+#include <linux/fs.h>
+#include <linux/uaccess.h>
+#include <linux/kernel.h>
+
 // Designed for developers to print the values of the packet data.
 typedef struct sk_buff Buffer;
 typedef unsigned char Byte;
 typedef struct mutex Mutex;
 typedef struct net_device NetworkConnection;
 static void PrintBinary(const Byte*title,Byte*bytes,int size) {
-    pr_info("%s: ", title); 
+    pr_info("WMS: %s: ", title); 
     for (int i = 0; i < size; i++) {
         for (int bit = 7; bit >= 0; bit--) 
              pr_cont("%d", (bytes[i] >> bit) & 1);
@@ -23,6 +33,26 @@ static void PrintBinary(const Byte*title,Byte*bytes,int size) {
     }
     pr_cont("\n");
 }
+typedef struct _PrintDataNoRepeat{ 
+    Byte*Data;
+    int Size;
+    struct _PrintDataNoRepeat*Prev;
+}_PrintDataNoRepeat;
+_PrintDataNoRepeat*_PrintDataNoRepeats=NULL;
+static void PrintDataNoRepeat(const Byte*title,Byte*Data,int Size){
+    _PrintDataNoRepeat*_printDataNoRepeats=_PrintDataNoRepeats;
+    for(;_printDataNoRepeats&&_printDataNoRepeats->Size!=Size&&memcmp(_printDataNoRepeats->Data,Data,Size)!=0;_printDataNoRepeats=_printDataNoRepeats->Prev);
+    if(!_printDataNoRepeats){
+        _printDataNoRepeats=kmalloc(sizeof(_PrintDataNoRepeat),GFP_KERNEL);
+        _printDataNoRepeats->Data=kmalloc(Size,GFP_KERNEL);
+        memcpy(_printDataNoRepeats->Data,Data,Size);
+        _printDataNoRepeats->Size=Size;
+        _printDataNoRepeats->Prev=_PrintDataNoRepeats;
+        _PrintDataNoRepeats=_printDataNoRepeats;
+        PrintBinary(title,Data,Size);
+    }   
+}
+
 typedef struct task_struct Thread;
 #define ThreadFunction(Name, Struct) \
     /* Define a wrapper struct to hold the thread task and associated object */ \
@@ -37,6 +67,7 @@ typedef struct task_struct Thread;
     /* Thread binding function that invokes the thread reader */ \
     static int Thread##Name##Bind(void *arg) { \
         Thread##Name##Wrapper *wrapper = (Thread##Name##Wrapper *)arg; \
+        set_current_state(TASK_INTERRUPTIBLE);\
         /* Call the thread reader with the task and object */ \
         Thread##Name##Reader(wrapper->task, wrapper->object); \
         kfree(wrapper); /* Free the wrapper after use */ \
@@ -71,16 +102,24 @@ typedef struct task_struct Thread;
     \
     /* Thread reader function definition (to be implemented elsewhere) */ \
     static void Thread##Name##Reader(Thread *task, Struct *object) //add { /* Implement thread-specific logic here */ } at thhis marco  ThreadFunction in the globel scope
-
-
 // Read to learn!
+struct NetworkDevice;
+typedef struct Routing{
+    struct NetworkDevice*NetworkDevice;
+    Buffer*Address;
+    ktime_t Expire;
+    Thread*Task;
+    Mutex Get;
+    struct Routing*Prev;
+} Routing;
 // This is use to hold network data and the network device
 typedef struct NetworkDevice{
     NetworkConnection*Connection;
     uint32_t PacketLimitation;
     Buffer*FirstOut,*MiddelOut,*LastOut;
+    Routing*Routings;
     Mutex Get;
-    struct NetworkDevice*prev;
+    struct NetworkDevice*Prev;
 }NetworkDevice;
 NetworkDevice*NetworkDevices=NULL;
 // This is use to send data but after the data is send the data is free
@@ -120,10 +159,45 @@ static Buffer*NewDataLinkLayer(NetworkDevice*networkDevice){
     return Out;
 }
 
-
+ThreadFunction(AutoDeleteRoutingLifetime,Routing){
+    object->Task=task;
+    while (object&&object->NetworkDevice&&ktime_before(ktime_get(),object->Expire)){
+        schedule();
+        ndelay(ktime_to_ns(ktime_add_ns(ktime_sub(object->Expire, ktime_get()), 100)));
+    }
+    if(!object||!object->NetworkDevice)return;
+    mutex_lock(&object->Get);
+    Routing*routings=object->NetworkDevice->Routings;
+    if(routings==object)
+        object->NetworkDevice->Routings=object->Prev;
+    else{
+        for(;routings;routings=routings->Prev)
+             if(object==routings->Prev)
+                break;
+        if(routings) 
+            routings->Prev = object->Prev;
+    }
+    kfree(object->Address);
+    kfree(object);
+    mutex_unlock(&object->Get);
+}
 static int DataLinkLayerReader(NetworkDevice*networkDevice,Buffer*In,Byte*InBytes){
-    PrintBinary("In Mac",InBytes,In->len);
-    PrintBinary("Out Mac",InBytes,In->len);
+    Routing*routing=networkDevice->Routings;
+    for(;routing&&memcmp(routing->Address,InBytes+6,6)!=0;routing=routing->Prev);
+    if(!routing){
+        routing=kmalloc(sizeof(Routing),GFP_KERNEL);
+        routing->NetworkDevice=networkDevice;
+        routing->Address=kmalloc(6,GFP_KERNEL);
+        memcpy(routing->Address,InBytes+6,6);
+        routing->Prev=networkDevice->Routings;
+        routing->Expire=ktime_add(ktime_get(),ktime_set(180, 0)); 
+        networkDevice->Routings=routing;
+        ThreadAutoDeleteRoutingLifetime(routing);
+    }else
+        routing->Expire=ktime_add(ktime_get(),ktime_set(180, 0));
+
+    PrintDataNoRepeat("EhterType",InBytes+12,2);
+
     return NET_RX_SUCCESS;
 }
 
@@ -131,7 +205,7 @@ static int DataLinkLayerReader(NetworkDevice*networkDevice,Buffer*In,Byte*InByte
 static int Router(Buffer*In,NetworkConnection*connection,struct packet_type*pt,struct net_device*orig_dev){
     if(In->len<40) return NET_RX_SUCCESS;
     NetworkDevice *networkDevice=NetworkDevices;
-    for(;networkDevice&&networkDevice->Connection!=connection;networkDevice=networkDevice->prev);
+    for(;networkDevice&&networkDevice->Connection!=connection;networkDevice=networkDevice->Prev);
     if(!networkDevice)return NET_RX_SUCCESS;
     Byte*InBytes=skb_mac_header(In);
     return DataLinkLayerReader(networkDevice,In,InBytes);
@@ -139,7 +213,6 @@ static int Router(Buffer*In,NetworkConnection*connection,struct packet_type*pt,s
 //Yes this is the place where the magic happens
 static struct packet_type NetworkCardReader={.type=htons(ETH_P_ALL),.func=Router,.ignore_outgoing = 1};
 static int __init wms_init(void){
-    printk(KERN_INFO "WeMakeSoftware Kernel Network\n");
     NetworkConnection*networkConnection;
     for_each_netdev(&init_net, networkConnection)
         if (!strncmp(networkConnection->name,"eth",3)&&networkConnection->ethtool_ops&&networkConnection->ethtool_ops->get_link_ksettings){
@@ -148,8 +221,9 @@ static int __init wms_init(void){
                 NetworkDevice*networkDevice=kmalloc(sizeof(NetworkDevice),GFP_KERNEL);
                 networkDevice->Connection=networkConnection;
                 networkDevice->PacketLimitation=ksettings.base.speed*144;
-                networkDevice->prev=NetworkDevices;
+                networkDevice->Prev=NetworkDevices;
                 networkDevice->FirstOut=NULL;
+                networkDevice->Routings=NULL;
                 mutex_init(&networkDevice->Get);
                 NetworkDevices=networkDevice;
                 uint32_t MaximumCreation=networkDevice->PacketLimitation/4;
@@ -159,6 +233,7 @@ static int __init wms_init(void){
                     networkDevice->LastOut->dev=networkDevice->Connection;
                     networkDevice->LastOut->next=NULL;
                     networkDevice->LastOut->len=12;
+              
                     memcpy(networkDevice->LastOut->data+6,networkDevice->Connection->dev_addr,6);
                     if(!networkDevice->FirstOut)
                         networkDevice->FirstOut=networkDevice->MiddelOut=networkDevice->LastOut;
@@ -173,14 +248,22 @@ static int __init wms_init(void){
             }
         }
     dev_add_pack(&NetworkCardReader);
-    printk(KERN_INFO "Done WeMakeSoftware Kernel Network\n");
     return 0;
 }
 module_init(wms_init);
 static void __exit wms_exit(void){
     dev_remove_pack(&NetworkCardReader);
     for(NetworkDevice*networkDevicePrev;NetworkDevices;NetworkDevices=networkDevicePrev){
-        networkDevicePrev=NetworkDevices->prev;
+        networkDevicePrev=NetworkDevices->Prev;
+        for(;NetworkDevices->Routings;NetworkDevices->Routings=NetworkDevices->Routings->Prev){
+            struct pid *_pid = find_get_pid(NetworkDevices->Routings->Task->pid);
+            if (_pid){
+                kill_pid(_pid, SIGKILL, 1);
+                put_pid(_pid); 
+            }
+            kfree(NetworkDevices->Routings->Address);
+            kfree(NetworkDevices->Routings);
+        }   
         for(Buffer*bufferNext;NetworkDevices->FirstOut;NetworkDevices->FirstOut=bufferNext){
             bufferNext=NetworkDevices->FirstOut->next;
             kfree_skb(NetworkDevices->FirstOut);

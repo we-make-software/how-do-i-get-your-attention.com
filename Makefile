@@ -19,7 +19,8 @@ clear:
 	sudo dmesg -C
 
 log:
-	sudo dmesg -w 
+	sudo dmesg -w | grep "WMS"
+
 
 deploy: insert log
 
