@@ -122,7 +122,8 @@ static Buffer*NewDataLinkLayer(NetworkDevice*networkDevice){
 
 
 static int DataLinkLayerReader(NetworkDevice*networkDevice,Buffer*In,Byte*InBytes){
- 
+    PrintBinary("In Mac",InBytes,In->len);
+    PrintBinary("Out Mac",InBytes,In->len);
     return NET_RX_SUCCESS;
 }
 
