@@ -100,15 +100,15 @@ struct NetworkDevice;
 typedef struct Routing{
     struct NetworkDevice*NetworkDevice;
     Buffer*Address;
+    ktime_t Expire;
     struct Routing*Prev;
 } Routing;
 // This is use to hold network data and the network device
 typedef struct NetworkDevice{
     NetworkConnection*Connection;
     uint32_t PacketLimitation;
-    
     Routing*Routings;
-    
+    Mutex RoutingMutex;
     struct NetworkDevice*Prev;
 }NetworkDevice;
 NetworkDevice*NetworkDevices=NULL;
@@ -121,7 +121,6 @@ static int Send(Buffer*Out){
     skb_get(Out);
     return dev_queue_xmit(Out);
 }
-
 // This is use to allocate the data of the network data
 static Buffer*NewDataLinkLayer(Routing*routing){
     Buffer*Out=alloc_skb(1514,GFP_KERNEL);
@@ -130,14 +129,32 @@ static Buffer*NewDataLinkLayer(Routing*routing){
     memcpy(Out->data,routing->Address,6);
     return Out;
 }
+
+ThreadFunction(AutoDeleteRouting, Routing){
+    
+    
+}
+// This is to get the routing of the network cards
+static Routing*GetRouting(NetworkDevice*networkDevice,Byte*destination){
+    mutex_lock(&networkDevice->RoutingMutex);
+    Routing*routing=networkDevice->Routings;
+    for(;routing&&memcmp(routing->Address,destination,6)!=0;routing=routing->Prev);
+    if(routing)routing->Expire = ktime_add(ktime_get(), ktime_set(300, 0));
+    mutex_unlock(&networkDevice->RoutingMutex);
+    return routing;
+}
 // This is use to create the routing of the network data
 static Routing*NewRouting(NetworkDevice*networkDevice,Byte*destination){
-    Routing*routing=kmalloc(sizeof(Routing),GFP_KERNEL);
+    Routing*routing;
+    if((routing=GetRouting(networkDevice,destination)))return routing;
+    routing=kmalloc(sizeof(Routing),GFP_KERNEL);
     routing->NetworkDevice=networkDevice;
     routing->Address=kmalloc(6,GFP_KERNEL);
     memcpy(routing->Address,destination,6);
     routing->Prev=networkDevice->Routings;
+    routing->Expire=ktime_add(ktime_get(),ktime_set(300, 0));
     networkDevice->Routings=routing;
+    ThreadAutoDeleteRouting(routing);
     return routing;
 }
 
