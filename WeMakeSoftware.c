@@ -96,80 +96,20 @@ typedef struct task_struct Thread;
     /* Thread reader function definition (to be implemented elsewhere) */ \
     static void Thread##Name##Reader(Thread *task, Struct *object) //add { /* Implement thread-specific logic here */ } at thhis marco  ThreadFunction in the globel scope
 // Read to learn!
-struct NetworkDevice;
-typedef struct Routing{
-    struct NetworkDevice*NetworkDevice;
-    Buffer*Address;
-    ktime_t Expire;
-    struct Routing*Prev;
-} Routing;
 // This is use to hold network data and the network device
 typedef struct NetworkDevice{
     NetworkConnection*Connection;
     uint32_t PacketLimitation;
-    Routing*Routings;
-    Mutex RoutingMutex;
+    Mutex RoutingLayer;
     struct NetworkDevice*Prev;
 }NetworkDevice;
 NetworkDevice*NetworkDevices=NULL;
-// This is use to send data but after the data is send the data is free
-static int SendAndFree(Buffer*Out){
-    return dev_queue_xmit(Out);
-}
-// This is use to hold the data of the network data even the data is send wee will be responsible to free the data if wee not use Send
-static int Send(Buffer*Out){
-    skb_get(Out);
-    return dev_queue_xmit(Out);
-}
-// This is use to allocate the data of the network data
-static Buffer*NewDataLinkLayer(Routing*routing){
-    Buffer*Out=alloc_skb(1514,GFP_KERNEL);
-    Out->dev=routing->NetworkDevice->Connection;
-    memcpy(Out->data+6,routing->NetworkDevice->Connection->dev_addr,6);
-    memcpy(Out->data,routing->Address,6);
-    return Out;
-}
-
-ThreadFunction(AutoDeleteRouting, Routing){
-    
-    
-}
-// This is to get the routing of the network cards
-static Routing*GetRouting(NetworkDevice*networkDevice,Byte*destination){
-    mutex_lock(&networkDevice->RoutingMutex);
-    Routing*routing=networkDevice->Routings;
-    for(;routing&&memcmp(routing->Address,destination,6)!=0;routing=routing->Prev);
-    if(routing)routing->Expire = ktime_add(ktime_get(), ktime_set(300, 0));
-    mutex_unlock(&networkDevice->RoutingMutex);
-    return routing;
-}
-// This is use to create the routing of the network data
-static Routing*NewRouting(NetworkDevice*networkDevice,Byte*destination){
-    Routing*routing;
-    if((routing=GetRouting(networkDevice,destination)))return routing;
-    routing=kmalloc(sizeof(Routing),GFP_KERNEL);
-    routing->NetworkDevice=networkDevice;
-    routing->Address=kmalloc(6,GFP_KERNEL);
-    memcpy(routing->Address,destination,6);
-    routing->Prev=networkDevice->Routings;
-    routing->Expire=ktime_add(ktime_get(),ktime_set(300, 0));
-    networkDevice->Routings=routing;
-    ThreadAutoDeleteRouting(routing);
-    return routing;
-}
 
 
-static int RoutingReader(Routing*routing,Buffer*In,Byte*InBytes){
-    // Here is my work spaces. 
+// This is the data link layer reader   
+static int DataLinkLayerReader(NetworkDevice*networkDevice,Buffer*In,Byte*InBytes){
 
     return NET_RX_SUCCESS;
-}
-
-static int DataLinkLayerReader(NetworkDevice*networkDevice,Buffer*In,Byte*InBytes){
-    Routing*routing=networkDevice->Routings;
-    for(;routing&&memcmp(routing->Address,InBytes+6,6)!=0;routing=routing->Prev);
-    if(!routing)routing=CreateRouting(networkDevice,InBytes+6);
-    return RoutingReader(routing,In,InBytes);
 }
 
 // This is the router to the network devices
@@ -222,3 +162,14 @@ MODULE_VERSION("1.0");
 
 // Ongoing task:
 // Make sure wee have setup buffer so it can be faster for the client when the get data.
+
+// This is use to send data but after the data is send the data is free
+static int SendAndFree(Buffer*Out){
+    return dev_queue_xmit(Out);
+}
+// This is use to hold the data of the network data even the data is send wee will be responsible to free the data if wee not use Send
+static int Send(Buffer*Out){
+    skb_get(Out);
+    return dev_queue_xmit(Out);
+}
+
