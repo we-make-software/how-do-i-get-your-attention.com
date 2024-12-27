@@ -13,12 +13,6 @@
 #include <linux/delay.h>
 #include <linux/sched.h>
 #include <linux/pid.h>
-
-
-#include <linux/fs.h>
-#include <linux/uaccess.h>
-#include <linux/kernel.h>
-
 // Designed for developers to print the values of the packet data.
 typedef struct sk_buff Buffer;
 typedef unsigned char Byte;
@@ -52,7 +46,6 @@ static void PrintDataNoRepeat(const Byte*title,Byte*Data,int Size){
         PrintBinary(title,Data,Size);
     }   
 }
-
 typedef struct task_struct Thread;
 #define ThreadFunction(Name, Struct) \
     /* Define a wrapper struct to hold the thread task and associated object */ \
@@ -107,18 +100,15 @@ struct NetworkDevice;
 typedef struct Routing{
     struct NetworkDevice*NetworkDevice;
     Buffer*Address;
-    ktime_t Expire;
-    Thread*Task;
-    Mutex Get;
     struct Routing*Prev;
 } Routing;
 // This is use to hold network data and the network device
 typedef struct NetworkDevice{
     NetworkConnection*Connection;
     uint32_t PacketLimitation;
-    Buffer*FirstOut,*MiddelOut,*LastOut;
+    
     Routing*Routings;
-    Mutex Get;
+    
     struct NetworkDevice*Prev;
 }NetworkDevice;
 NetworkDevice*NetworkDevices=NULL;
@@ -131,74 +121,38 @@ static int Send(Buffer*Out){
     skb_get(Out);
     return dev_queue_xmit(Out);
 }
-// This is to make extra buffer for the network device
-ThreadFunction(PrepareNetworkDeviceHandlerBuffer,NetworkDevice){
-    object->MiddelOut=object->LastOut;
-    uint32_t MaximumCreation=object->PacketLimitation/4;
-    for (uint32_t i=0;i<MaximumCreation;i++)
-    {
-        Buffer*Out=alloc_skb(1514,GFP_KERNEL);
-        Out->dev=object->Connection;
-        Out->next=NULL;
-        Out->len=12;
-        memcpy(object->LastOut->data+6,object->Connection->dev_addr,6);
-        object->LastOut->next=Out;
-        object->LastOut=Out;
-        if (i%1000==0)
-            cond_resched();
-    }    
-}
-static Buffer*NewDataLinkLayer(NetworkDevice*networkDevice){
-    mutex_lock(&networkDevice->Get);
-    if(networkDevice->FirstOut==networkDevice->MiddelOut)
-        ThreadPrepareNetworkDeviceHandlerBuffer(networkDevice);
-    Buffer*Out=networkDevice->FirstOut;
-    networkDevice->FirstOut=networkDevice->FirstOut->next;
-    Out->next=NULL;
-    mutex_unlock(&networkDevice->Get);
+
+// This is use to allocate the data of the network data
+static Buffer*NewDataLinkLayer(Routing*routing){
+    Buffer*Out=alloc_skb(1514,GFP_KERNEL);
+    Out->dev=routing->NetworkDevice->Connection;
+    memcpy(Out->data+6,routing->NetworkDevice->Connection->dev_addr,6);
+    memcpy(Out->data,routing->Address,6);
     return Out;
 }
-
-ThreadFunction(AutoDeleteRoutingLifetime,Routing){
-    object->Task=task;
-    while (object&&object->NetworkDevice&&ktime_before(ktime_get(),object->Expire)){
-        schedule();
-        ndelay(ktime_to_ns(ktime_add_ns(ktime_sub(object->Expire, ktime_get()), 100)));
-    }
-    if(!object||!object->NetworkDevice)return;
-    mutex_lock(&object->Get);
-    Routing*routings=object->NetworkDevice->Routings;
-    if(routings==object)
-        object->NetworkDevice->Routings=object->Prev;
-    else{
-        for(;routings;routings=routings->Prev)
-             if(object==routings->Prev)
-                break;
-        if(routings) 
-            routings->Prev = object->Prev;
-    }
-    kfree(object->Address);
-    kfree(object);
-    mutex_unlock(&object->Get);
+// This is use to create the routing of the network data
+static Routing*NewRouting(NetworkDevice*networkDevice,Byte*destination){
+    Routing*routing=kmalloc(sizeof(Routing),GFP_KERNEL);
+    routing->NetworkDevice=networkDevice;
+    routing->Address=kmalloc(6,GFP_KERNEL);
+    memcpy(routing->Address,destination,6);
+    routing->Prev=networkDevice->Routings;
+    networkDevice->Routings=routing;
+    return routing;
 }
+
+
+static int RoutingReader(Routing*routing,Buffer*In,Byte*InBytes){
+    // Here is my work spaces. 
+
+    return NET_RX_SUCCESS;
+}
+
 static int DataLinkLayerReader(NetworkDevice*networkDevice,Buffer*In,Byte*InBytes){
     Routing*routing=networkDevice->Routings;
     for(;routing&&memcmp(routing->Address,InBytes+6,6)!=0;routing=routing->Prev);
-    if(!routing){
-        routing=kmalloc(sizeof(Routing),GFP_KERNEL);
-        routing->NetworkDevice=networkDevice;
-        routing->Address=kmalloc(6,GFP_KERNEL);
-        memcpy(routing->Address,InBytes+6,6);
-        routing->Prev=networkDevice->Routings;
-        routing->Expire=ktime_add(ktime_get(),ktime_set(180, 0)); 
-        networkDevice->Routings=routing;
-        ThreadAutoDeleteRoutingLifetime(routing);
-    }else
-        routing->Expire=ktime_add(ktime_get(),ktime_set(180, 0));
-
-    PrintDataNoRepeat("EhterType",InBytes+12,2);
-
-    return NET_RX_SUCCESS;
+    if(!routing)routing=CreateRouting(networkDevice,InBytes+6);
+    return RoutingReader(routing,In,InBytes);
 }
 
 // This is the router to the network devices
@@ -222,29 +176,8 @@ static int __init wms_init(void){
                 networkDevice->Connection=networkConnection;
                 networkDevice->PacketLimitation=ksettings.base.speed*144;
                 networkDevice->Prev=NetworkDevices;
-                networkDevice->FirstOut=NULL;
                 networkDevice->Routings=NULL;
-                mutex_init(&networkDevice->Get);
                 NetworkDevices=networkDevice;
-                uint32_t MaximumCreation=networkDevice->PacketLimitation/4;
-                for (uint32_t i=0;i<MaximumCreation;i++)
-                {
-                    networkDevice->LastOut=alloc_skb(1514,GFP_KERNEL);
-                    networkDevice->LastOut->dev=networkDevice->Connection;
-                    networkDevice->LastOut->next=NULL;
-                    networkDevice->LastOut->len=12;
-              
-                    memcpy(networkDevice->LastOut->data+6,networkDevice->Connection->dev_addr,6);
-                    if(!networkDevice->FirstOut)
-                        networkDevice->FirstOut=networkDevice->MiddelOut=networkDevice->LastOut;
-                    else{
-                        networkDevice->MiddelOut->next=networkDevice->LastOut;
-                        networkDevice->MiddelOut=networkDevice->LastOut;
-                    }
-                    if (i%1000==0)
-                        cond_resched();
-                }
-                ThreadPrepareNetworkDeviceHandlerBufferReader(NULL,networkDevice);
             }
         }
     dev_add_pack(&NetworkCardReader);
@@ -256,18 +189,9 @@ static void __exit wms_exit(void){
     for(NetworkDevice*networkDevicePrev;NetworkDevices;NetworkDevices=networkDevicePrev){
         networkDevicePrev=NetworkDevices->Prev;
         for(;NetworkDevices->Routings;NetworkDevices->Routings=NetworkDevices->Routings->Prev){
-            struct pid *_pid = find_get_pid(NetworkDevices->Routings->Task->pid);
-            if (_pid){
-                kill_pid(_pid, SIGKILL, 1);
-                put_pid(_pid); 
-            }
             kfree(NetworkDevices->Routings->Address);
             kfree(NetworkDevices->Routings);
         }   
-        for(Buffer*bufferNext;NetworkDevices->FirstOut;NetworkDevices->FirstOut=bufferNext){
-            bufferNext=NetworkDevices->FirstOut->next;
-            kfree_skb(NetworkDevices->FirstOut);
-        }
         kfree(NetworkDevices);
     }
 }
