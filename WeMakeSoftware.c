@@ -143,6 +143,17 @@ static inline void RefreshHardware(Hardware*hardware){
           hardware->Expire = ktime_add_ns(ktime_get(), 600000000000);
     mutex_unlock(&hardware->NetworkDevice->MutexHardware);
 }
+static inline void SetBufferSize(Buffer*buffer,int Size){
+    buffer->tail=buffer->data+(buffer->len=buffer->data_len=Size);
+}
+static inline  Buffer *CreateBuffer(NetworkDevice*networkDevice){
+    Buffer*Out=alloc_skb(1514,GFP_KERNEL);
+    if(!Out)return NULL;
+    Out->dev=networkDevice->Connection;
+    Out->truesize=1514;
+    Out->priority=0;
+    return Out;
+}
 static int RFC826Reader(NetworkDevice*networkDevice,Buffer*In,Byte*InBytes){
     Hardware*hardware=networkDevice->Hardware;
     for(;hardware&&memcmp(hardware->Mac,InBytes+22,6);hardware=hardware->Prev);
