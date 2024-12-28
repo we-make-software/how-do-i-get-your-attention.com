@@ -12,13 +12,15 @@
 #include <linux/ktime.h>
 #include <linux/delay.h>
 #include <linux/sched.h>
+#include <linux/jiffies.h>
 #include <linux/pid.h>
 // Designed for developers to print the values of the packet data.
 typedef struct sk_buff Buffer;
 typedef unsigned char Byte;
 typedef struct mutex Mutex;
 typedef struct net_device NetworkConnection;
-static void PrintBinary(const Byte*title,Byte*bytes,int size) {
+typedef struct task_struct Thread;
+static inline void PrintBinary(const Byte*title,Byte*bytes,int size) {
     pr_info("WMS: %s: ", title); 
     for (int i = 0; i < size; i++) {
         for (int bit = 7; bit >= 0; bit--) 
@@ -46,10 +48,8 @@ static void PrintDataNoRepeat(const Byte*title,Byte*Data,int Size){
         PrintBinary(title,Data,Size);
     }   
 }
-typedef struct task_struct Thread;
-#define ThreadFunction(Name, Struct) \
-    /* Define a wrapper struct to hold the thread task and associated object */ \
-    typedef struct Thread##Name##Wrapper { \
+static 
+#define ThreadFunction(Name, Struct) typedef struct Thread##Name##Wrapper { \
         Thread*task; \
         Struct*object; \
     } Thread##Name##Wrapper; \
@@ -69,13 +69,13 @@ typedef struct task_struct Thread;
     \
     /* Function to create and start the thread */ \
     static void Thread##Name(Struct *object) { \
-        Thread##Name##Wrapper *wrapper = kmalloc(sizeof(Thread##Name##Wrapper), GFP_KERNEL); \
-        if (!wrapper) { \
+        Thread##Name##Wrapper *_wrapper = kmalloc(sizeof(Thread##Name##Wrapper), GFP_KERNEL); \
+        if (!_wrapper) { \
             /* If memory allocation fails, directly call the thread reader */ \
             Thread##Name##Reader(NULL, object); \
             return; \
         } \
-        wrapper->object = object; \
+        _wrapper->object = object; \
         /* Generate UUID and create a thread name */ \
         uuid_t uuid; \
         char uuid_str[UUID_STRING_LEN]; \
@@ -84,31 +84,116 @@ typedef struct task_struct Thread;
             uuid.b[0], uuid.b[1], uuid.b[2], uuid.b[3], uuid.b[4], uuid.b[5], uuid.b[6], uuid.b[7], \
             uuid.b[8], uuid.b[9], uuid.b[10], uuid.b[11], uuid.b[12], uuid.b[13], uuid.b[14], uuid.b[15]); \
         /* Start the kernel thread */ \
-        wrapper->task = kthread_run(Thread##Name##Bind, wrapper, uuid_str); \
-        if (IS_ERR(wrapper->task)) { \
+        _wrapper->task = kthread_run(Thread##Name##Bind, _wrapper, uuid_str); \
+        if (IS_ERR(_wrapper->task)) { \
             /* If thread creation fails, call the thread reader and free the wrapper */ \
             Thread##Name##Reader(NULL, object); \
-            kfree(wrapper); \
+            kfree(_wrapper); \
             return; \
         } \
     } \
     \
     /* Thread reader function definition (to be implemented elsewhere) */ \
     static void Thread##Name##Reader(Thread *task, Struct *object) //add { /* Implement thread-specific logic here */ } at thhis marco  ThreadFunction in the globel scope
+
 // Read to learn!
+struct Hardware;
+struct NetworkDevice;
+typedef struct Hardware{
+    struct NetworkDevice*NetworkDevice;
+    Byte*Mac,*Address;
+    ktime_t Expire;
+    struct Hardware*Prev;
+    Thread*Task;
+} Hardware;
 // This is use to hold network data and the network device
 typedef struct NetworkDevice{
     NetworkConnection*Connection;
     uint32_t PacketLimitation;
-    Mutex RoutingLayer;
+    Hardware*Hardware;
+    Mutex MutexHardware;
     struct NetworkDevice*Prev;
 }NetworkDevice;
 NetworkDevice*NetworkDevices=NULL;
 
 
+ThreadFunction(HardwareExpire,Hardware){
+    object->Task=task;
+    while (!kthread_should_stop()&&object&&ktime_get()<=object->Expire)
+           schedule();
+    if(kthread_should_stop()||!object)return;
+    mutex_lock(&object->NetworkDevice->MutexHardware);
+    object->Task=NULL;
+    if(object==object->NetworkDevice->Hardware)
+        object->NetworkDevice->Hardware=object->Prev;
+    else{
+        Hardware*hardwarePrev;
+        for(hardwarePrev=object->NetworkDevice->Hardware;hardwarePrev->Prev!=object;hardwarePrev=hardwarePrev->Prev);
+        if(hardwarePrev)hardwarePrev->Prev=object->Prev;
+    }
+    mutex_unlock(&object->NetworkDevice->MutexHardware);
+    kfree(object->Mac);
+    kfree(object->Address);
+    kfree(object);
+}
+static inline void RefreshHardware(Hardware*hardware){
+    if(!hardware)return;
+    mutex_lock(&hardware->NetworkDevice->MutexHardware);
+    if(hardware)
+          hardware->Expire = ktime_add_ns(ktime_get(), 600000000000);
+    mutex_unlock(&hardware->NetworkDevice->MutexHardware);
+}
+static int RFC826Reader(NetworkDevice*networkDevice,Buffer*In,Byte*InBytes){
+    Hardware*hardware=networkDevice->Hardware;
+    for(;hardware&&memcmp(hardware->Mac,InBytes+22,6);hardware=hardware->Prev);
+    if(!hardware){
+        mutex_lock(&networkDevice->MutexHardware);
+        hardware=kmalloc(sizeof(Hardware),GFP_KERNEL);
+        hardware->NetworkDevice=networkDevice;
+        hardware->Mac=kmalloc(6,GFP_KERNEL);
+        memcpy(hardware->Mac,InBytes+32,6);
+        hardware->Address=kmalloc(4,GFP_KERNEL);
+        memcpy(hardware->Address,InBytes+28,4);
+        hardware->Prev=networkDevice->Hardware;
+        hardware->Expire=ktime_add_ns(ktime_get(),600000000000);
+        networkDevice->Hardware=hardware;
+        mutex_unlock(&networkDevice->MutexHardware);
+        ThreadHardwareExpire(hardware);
+    }
+    /*
+    PrintBinary("Destination",InBytes,6);
+    PrintBinary("Source",InBytes+6,6);// this is the router where wee get the data from
+    PrintBinary("Ethertype",InBytes+12,2);
+    PrintBinary("hrd",InBytes+14,2);// Always 1 (1=ETHERNET)
+    PrintBinary("pro",InBytes+16,2);//Always 2048 (rfc791)
+    PrintBinary("hln",InBytes+18,1);//Always 6 because of mac size
+    PrintBinary("pln",InBytes+19,1);// Always 4 ipv4 size
+    PrintBinary("op",InBytes+20,2); // 1=Request 2=Reply
+
+
+    PrintBinary("sha",InBytes+22,6); // this is the hardware address of the sender 
+    PrintBinary("spa",InBytes+28,4); //router ip address (because the op is 1)
+    PrintBinary("tha",InBytes+32,6); // this is the hardware address of the reply
+    PrintBinary("tpa",InBytes+38,4);  // this is the ip address of the reply(US)
+    */
+    return NET_RX_SUCCESS;
+}
+static int RFC971Reader(NetworkDevice*networkDevice,Buffer*In,Byte*InBytes){
+    return NET_RX_SUCCESS;
+} 
+static int RFC8200(NetworkDevice*networkDevice,Buffer*In,Byte*InBytes){
+    return NET_RX_SUCCESS;
+}
 // This is the data link layer reader   
 static int DataLinkLayerReader(NetworkDevice*networkDevice,Buffer*In,Byte*InBytes){
 
+
+    switch (InBytes[12]<<8|InBytes[13])
+    {
+        case 2048:return RFC971Reader(networkDevice,In,InBytes+14);
+        case 2054:if(InBytes[14]==0&&InBytes[15]==1)return RFC826Reader(networkDevice,In,InBytes);break;
+        case 34525:return RFC8200(networkDevice,In,InBytes+14);
+    }
     return NET_RX_SUCCESS;
 }
 
@@ -133,7 +218,7 @@ static int __init wms_init(void){
                 networkDevice->Connection=networkConnection;
                 networkDevice->PacketLimitation=ksettings.base.speed*144;
                 networkDevice->Prev=NetworkDevices;
-                networkDevice->Routings=NULL;
+                mutex_init(&networkDevice->MutexHardware);
                 NetworkDevices=networkDevice;
             }
         }
@@ -144,11 +229,15 @@ module_init(wms_init);
 static void __exit wms_exit(void){
     dev_remove_pack(&NetworkCardReader);
     for(NetworkDevice*networkDevicePrev;NetworkDevices;NetworkDevices=networkDevicePrev){
-        networkDevicePrev=NetworkDevices->Prev;
-        for(;NetworkDevices->Routings;NetworkDevices->Routings=NetworkDevices->Routings->Prev){
-            kfree(NetworkDevices->Routings->Address);
-            kfree(NetworkDevices->Routings);
-        }   
+        mutex_lock(&NetworkDevices->MutexHardware);
+        for(;NetworkDevices->Hardware;NetworkDevices->Hardware=NetworkDevices->Hardware->Prev){
+            kthread_stop(NetworkDevices->Hardware->Task); 
+            kfree(NetworkDevices->Hardware->Mac);
+            kfree(NetworkDevices->Hardware->Address);
+            kfree(NetworkDevices->Hardware);
+        }
+        mutex_unlock(&NetworkDevices->MutexHardware);
+        networkDevicePrev=NetworkDevices->Prev;   
         kfree(NetworkDevices);
     }
 }
@@ -156,7 +245,7 @@ module_exit(wms_exit);
 // Yes that's me/us like to join visit
 // https://www.facebook.com/profile.php?id=61571087457082
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Pirasath Luxchumykanthan");
+MODULE_AUTHOR("we-make-software.com");
 MODULE_DESCRIPTION("WeMakeSoftware Kernel Network");
 MODULE_VERSION("1.0");
 
@@ -164,11 +253,11 @@ MODULE_VERSION("1.0");
 // Make sure wee have setup buffer so it can be faster for the client when the get data.
 
 // This is use to send data but after the data is send the data is free
-static int SendAndFree(Buffer*Out){
+static inline int SendAndFree(Buffer*Out){
     return dev_queue_xmit(Out);
 }
 // This is use to hold the data of the network data even the data is send wee will be responsible to free the data if wee not use Send
-static int Send(Buffer*Out){
+static inline int Send(Buffer*Out){
     skb_get(Out);
     return dev_queue_xmit(Out);
 }
