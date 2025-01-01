@@ -19,7 +19,7 @@ clear:
 	sudo dmesg -C
 
 log:
-	sudo dmesg -w | grep "WMS"
+	sudo dmesg -w | grep "WeMakeSoftware"
 
 
 deploy: insert log
