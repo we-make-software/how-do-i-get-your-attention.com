@@ -1,7 +1,9 @@
 BRANCH = main
 
-ModuleWeMakeSoftware = WeMakeSoftware
-obj-m += $(ModuleWeMakeSoftware).o
+# The main module name
+obj-m += WeMakeSoftware.o
+obj-m += Router.o
+
 all: build
 
 build:
@@ -11,22 +13,17 @@ clean:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
 
 insert: build
-	sudo insmod $(ModuleWeMakeSoftware).ko
-
+	sudo insmod WeMakeSoftware.ko
+	sudo insmod Router.ko
 remove:
-	sudo rmmod $(ModuleWeMakeSoftware)  || echo "Nothing to remove"
+	sudo rmmod Router || echo "Nothing to remove"
+	sudo rmmod WeMakeSoftware || echo "Nothing to remove"
+
 clear: 
 	sudo dmesg -C
 
 log:
-	sudo dmesg -w | grep "WeMakeSoftware"
-
-
-deploy: insert log
-
-stop: remove clean clear
-
-reset: remove clear deploy
+	sudo dmesg -w | grep "WeMakeSoftware\|Router"
 
 login:
 	git remote set-url origin https://github.com/we-make-software/how-to-get-your-attention.com.git
